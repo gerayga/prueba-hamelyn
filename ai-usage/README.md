@@ -1,38 +1,59 @@
-# Registro del uso de IA
+# Uso de IA
 
-**Herramienta:** Claude Code (modelo Claude Opus 5.5), en la app de escritorio, con acceso a la carpeta del proyecto, a la terminal y a GitHub (`gh`).
+He usado **Claude Code** (Claude Opus 5.5) como asistente durante toda la prueba.
 
-**Cómo se usó.** Como asistente de programación en pareja. El candidato fijó el stack (Python + SQLite + Wikidata), el alcance y los criterios de decisión. La IA propuso el plan y las reglas, escribió el código y ejecutó el pipeline. En cada paso presentaba los resultados y los casos dudosos, y el candidato elegía entre las opciones: qué hacer con los ambiguos, commitear la caché, ajustes de reglas, overrides.
+## Reparto de trabajo
 
-| Sesión | Contenido |
+| Yo | La IA |
 |---|---|
-| [01](01-analisis-y-plan.md) | Análisis del enunciado y del seed, plan, decisiones de alcance |
-| [02](02-resolucion.md) | Resolución nombre → QID, primeros errores detectados (Almudena Grandes, Homer) |
-| [03](03-enriquecimiento.md) | Ajustes de reglas, enriquecimiento y los problemas técnicos de fechas, etiquetas `mul`, `maxlag` y determinismo |
-| [04](04-informe-calidad.md) | Informe de calidad, verificación de la muestra, corrección del desempate de fechas |
-| [05](05-documentacion-y-cierre.md) | README y validación en un clon limpio |
+| Acotar el problema: fuente (Wikidata), almacenamiento (SQLite), forma de entrega (repo, CLI) | Analizar el seed y proponer un plan y alternativas |
+| Decidir en cada punto abierto qué opción aplicar | Escribir el código, los tests y la documentación |
+| Revisar los resultados y los casos dudosos antes de aprobar cada paso | Ejecutar el pipeline y las comprobaciones sobre los datos |
+| Resolver a mano los casos que las reglas no deciden (overrides) | Presentar cifras, diffs y casos límite para la revisión |
 
-## Decisiones tomadas por el candidato
-- Stack: Python + SQLite + Wikidata. CLI sencilla. Repo en GitHub.
-- Commitear la caché cruda para que el resultado sea reproducible sin red.
-- Casos ambiguos: guardar el mejor candidato con baja confianza y añadir overrides manuales justificados.
-- Aceptar «humano cuya existencia se discute» como persona, la regla de dominancia por sitelinks y el override de Mary Beard.
-- Sacar el PDF del enunciado del repo (reescritura del historial hecha por el candidato).
+El código lo escribió la IA. Mi trabajo fue el planteamiento, las decisiones de diseño y calidad, y la revisión de los resultados en cada paso.
 
-## Qué se validó (y cómo)
-- Cada cambio de reglas se validó con un diff de la resolución completa antes y después. Solo cambiaron los casos previstos.
-- Revisión de todos los casos ambiguos, los nombres de una sola palabra, los seudónimos y los resueltos por alias, más una muestra aleatoria de 20 filas. Detalle en la §7 de `QUALITY_REPORT.md`.
-- Reproducibilidad comprobada con hashes y con un test que exige resultados idénticos byte a byte, y con un clon limpio desde GitHub.
+## Decisiones que tomé
 
-## Errores de la IA detectados durante el trabajo
-Se dejan registrados porque muestran qué hizo falta revisar:
-- La coincidencia de nombres usaba el texto que devolvía la API en vez de la etiqueta (Almudena Grandes salía como `partial`).
-- El filtro de humanos descartaba a Homero.
-- Leer fechas por SPARQL las desplazaba (años a.C. y calendario juliano). Se detectó con una prueba antes de dar el dato por bueno.
-- La primera versión marcaba los IDs externos con varios valores como «conflictos», y su elección dependía de un orden no determinista.
-- Un `sed` rompió `export.py` y el error se llegó a commitear. Se corrigió en el commit siguiente y se añadió un test de humo que lo habría detectado.
-- El desempate de fechas por orden del API daba un año incorrecto para Ismat Chughtai. Se detectó en la muestra manual.
+El enfoque inicial (Wikidata, SQLite, un repo) fue mío. En el resto de puntos, la IA planteó alternativas y yo elegí; algunas soluciones técnicas las propuso la IA al detectar un problema y yo las aprobé (marcadas con *).
 
-## Qué no se incluye
-- No hay claves ni tokens: el pipeline solo usa APIs públicas sin autenticación.
-- Estos ficheros son resúmenes redactados durante la sesión, no la transcripción literal.
+| Decisión | Opciones valoradas | Por qué |
+|---|---|---|
+| Wikidata como única fuente | Añadir OpenLibrary o VIAF | Tiene identificadores estables y ya enlaza con VIAF, ISNI y OpenLibrary. Varias fuentes multiplican la reconciliación; en 2-3 h prefiero una sola bien resuelta. |
+| SQLite y CLI sencilla | Postgres, notebooks | Un único fichero, sin servidor, fácil de revisar y de reproducir. |
+| Separar resolución (nombre → QID) y enriquecimiento | Hacerlo todo en un paso | El riesgo está en identificar bien a cada persona. Quiero esa decisión auditable y corregible sin tocar el resto. |
+| Versionar la caché cruda de Wikidata | No versionarla y descargar en cada ejecución | Reproducibilidad exacta y ejecución sin red. Wikidata cambia continuamente. |
+| Casos ambiguos: guardar el mejor candidato con confianza baja + overrides manuales | Dejarlos sin QID | No se pierde información, queda trazado y la decisión humana está documentada. |
+| Aceptar «humano cuya existencia se discute» (Q21070568) como persona | Resolver Homero con un override | Es una regla general que vale para otras figuras semilegendarias, no un parche puntual. |
+| Regla de dominancia (≥ 5× sitelinks) | Resolver los 13 ambiguos con overrides | Los 13 eran homónimos muy menores. Una regla generaliza mejor que 13 excepciones manuales. |
+| Override de Mary Beard → la clasicista | Dejarla como ambigua | Dos candidatas con notoriedad parecida. El contexto del seed (divulgación actual) decide. |
+| Seudónimos: la fila del seed apunta a la persona real | Tratar el seudónimo como entidad propia | Para una base de autores interesa la persona. El seudónimo se conserva como nombre. |
+| Fechas con su precisión y calendario originales* | Normalizar a `DATE` | Un «siglo VII a.C.» no es una fecha exacta. Normalizar inventaría precisión. |
+| Informe de calidad generado desde los datos + notas manuales aparte* | Informe escrito a mano | Las cifras no se desactualizan y el análisis manual no se pisa al regenerar. |
+| No distribuir el enunciado en el repo | — | Lo retiré del historial. |
+
+## Qué se revisó antes de aprobar cada paso
+
+La IA ejecutó las comprobaciones y me presentó los resultados; yo los revisé antes de aprobar el paso siguiente.
+
+- Los 14 casos ambiguos de la primera ejecución, antes de decidir las reglas.
+- El diff de la resolución completa antes y después de cada cambio de reglas: solo debían cambiar los casos previstos.
+- Los seudónimos, los nombres de una sola palabra y los resueltos por alias.
+- Una muestra aleatoria de 20 filas. Detalle en la §7 de `QUALITY_REPORT.md`.
+- Que el pipeline se reproduce idéntico desde un clon limpio de GitHub.
+
+## Problemas detectados durante la validación
+
+Los incluyo porque muestran que ningún resultado se dio por bueno sin comprobarlo:
+
+- **Homero resolvía a Winslow Homer.** En Wikidata no está clasificado como «humano». Se resolvió con una regla.
+- **Fechas mal en SPARQL.** El endpoint SPARQL desplaza un año las fechas a.C. y convierte las julianas a gregoriano. Se cambió la fuente de las fechas al JSON original.
+- **Ismat Chughtai con el año de nacimiento incorrecto**, detectado en la muestra manual. Se cambió el criterio de desempate a «más referencias».
+- **Autores sin etiqueta.** Wikidata introdujo en 2024 las etiquetas `mul` (válidas para todos los idiomas). Se añadieron como respaldo.
+- **Resultados no deterministas** (orden de SPARQL, fecha de ejecución). Se corrigió y ahora hay un test que exige resultados idénticos byte a byte.
+
+## Detalle por sesión
+
+[01 Planteamiento](01-analisis-y-plan.md) · [02 Resolución](02-resolucion.md) · [03 Enriquecimiento](03-enriquecimiento.md) · [04 Calidad](04-informe-calidad.md) · [05 Cierre](05-documentacion-y-cierre.md)
+
+No se incluyen claves ni tokens: el pipeline solo usa APIs públicas sin autenticación.

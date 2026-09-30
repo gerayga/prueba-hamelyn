@@ -1,19 +1,20 @@
-# Sesión 02: resolución nombre → QID
+# 02: Resolución nombre → QID
 
-## Prompt del candidato
-"Quita el PDF, añade gitattributes y sigue con el paso 2."
+## Qué pedí
+Implementar el cliente de Wikidata con caché y la resolución de los 500 nombres, y presentarme los casos dudosos antes de dar nada por cerrado.
 
-## Qué hizo la IA
-- Añadió `.gitattributes` para fijar los finales de línea en LF.
-- No pudo quitar el PDF del historial: la herramienta bloqueó la reescritura de git por considerarla destructiva. Queda pendiente de que lo haga el candidato.
-- Implementó `wikidata.py`: caché en disco por petición, User-Agent identificable, reintentos con backoff y modo `--offline`.
-- Implementó `resolve.py`: búsqueda de candidatos con wbsearchentities en inglés y español, hechos de cada candidato por SPARQL, puntuación, decisión y overrides.
-- Resultado de la primera ejecución completa: 484 matched, 14 ambiguous y 2 not_a_person. Los 7 pares seudónimo/nombre real se detectan solos como QIDs compartidos.
+## Qué implementó la IA
+- Un cliente HTTP con caché en disco, modo offline y reintentos.
+- Búsqueda de candidatos en inglés y español, señales por SPARQL (humano, perfil literario, obras P50, sitelinks), puntuación y decisión.
 
-## Errores detectados y corregidos durante la validación
-- **Almudena Grandes salía como `partial`.** La API informa como coincidencia del alias largo ("Almudena Grandes Hernández") aunque la etiqueta coincida exactamente. Se corrigió para comprobar primero la etiqueta, y se añadió un test.
-- **Homer resolvía a Winslow Homer.** El Q6691 tiene P31 = Q21070568 ("humano cuya existencia se discute") y no Q5, así que el filtro de humanos lo descartaba. Se propone ajustar la regla.
+## Resultado de la primera ejecución
+- 484 `matched`, 14 `ambiguous` y 2 `not_a_person`.
+- Los 7 pares de seudónimos se detectaron solos porque resuelven al mismo QID.
 
-## Revisión manual de la IA
-- Revisó los 27 nombres de una sola palabra: todos correctos (Colette, Azorín → José Martínez Ruiz, Adonis, Stendhal, Rumi…).
-- De los 13 ambiguos restantes, en todos el mejor candidato es el correcto. La regla de margen es demasiado conservadora cuando hay homónimos poco conocidos que también son escritores (John Milton padre, Robert Browning el bizantinista…).
+## Casos dudosos (analizados por la IA, revisados por mí antes de decidir)
+- **Los 14 ambiguos.** En 13, el candidato elegido era correcto; la regla de margen era demasiado conservadora con homónimos menores que también escriben (el padre de John Milton, un bizantinista llamado Robert Browning…).
+- **El caso incorrecto: Homer → Winslow Homer.** El Homero de Wikidata está clasificado como «humano cuya existencia se discute», no como «humano».
+- **Los nombres de una sola palabra**: todos correctos.
+
+## Problema corregido
+Almudena Grandes salía como coincidencia parcial: la API informaba del alias largo aunque la etiqueta coincidiera. Se corrigió y se añadió un test.
