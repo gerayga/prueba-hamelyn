@@ -5,7 +5,7 @@ import logging
 import sqlite3
 from pathlib import Path
 
-from authors import db, resolve
+from authors import db, enrich, export, resolve
 from authors.wikidata import WikidataClient
 from authors.normalize import clean_name, match_key
 
@@ -14,6 +14,7 @@ DEFAULT_SEED = ROOT / "authors_seed.csv"
 DEFAULT_DB = ROOT / "data" / "authors.db"
 CACHE_DIR = ROOT / "data" / "cache"
 OVERRIDES = ROOT / "data" / "overrides.csv"
+EXPORT_DIR = ROOT / "data" / "export"
 
 log = logging.getLogger("authors")
 
@@ -41,8 +42,15 @@ def cmd_load(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     log.info("Cargadas %d filas del seed", len(rows))
 
 
+def get_client(args: argparse.Namespace) -> WikidataClient:
+    # Un único cliente por ejecución, para poder saber qué entradas de caché se usaron.
+    if getattr(args, "client", None) is None:
+        args.client = WikidataClient(CACHE_DIR, offline=args.offline)
+    return args.client
+
+
 def cmd_resolve(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
-    client = WikidataClient(CACHE_DIR, offline=args.offline)
+    client = get_client(args)
     resolve.run(conn, client, OVERRIDES, limit=args.limit)
     for row in conn.execute(
         "SELECT status, COUNT(*) n FROM seed_resolution GROUP BY status ORDER BY n DESC"
@@ -50,9 +58,29 @@ def cmd_resolve(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
         log.info("  %-13s %d", row["status"], row["n"])
 
 
+def cmd_enrich(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    enrich.run(conn, get_client(args))
+
+
+def cmd_export(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    export.run(conn, EXPORT_DIR)
+
+
+def cmd_run(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    """Pipeline completo. La BD se reconstruye desde cero (la caché se conserva)."""
+    for step in (cmd_load, cmd_resolve, cmd_enrich, cmd_export):
+        log.info("== %s ==", step.__name__.removeprefix("cmd_"))
+        step(conn, args)
+    if args.prune_cache:
+        log.info("Caché: %d entradas sin usar eliminadas", get_client(args).prune_unused())
+
+
 COMMANDS = {
     "load": cmd_load,
     "resolve": cmd_resolve,
+    "enrich": cmd_enrich,
+    "export": cmd_export,
+    "run": cmd_run,
 }
 
 
@@ -63,6 +91,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--offline", action="store_true",
                         help="usar solo la caché de data/cache (sin red)")
+    parser.add_argument("--prune-cache", action="store_true",
+                        help="(run) borrar de la caché las respuestas no usadas")
     parser.add_argument("--limit", type=int, help="procesar solo las N primeras filas")
     parser.add_argument("command", choices=list(COMMANDS))
     args = parser.parse_args(argv)
@@ -71,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
+    if args.command == "run" and args.db.exists():
+        args.db.unlink()
     conn = db.connect(args.db)
     try:
         COMMANDS[args.command](conn, args)

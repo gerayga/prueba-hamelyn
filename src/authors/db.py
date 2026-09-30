@@ -39,24 +39,30 @@ CREATE TABLE IF NOT EXISTS seed_resolution (
 
 CREATE TABLE IF NOT EXISTS authors (
     qid                 TEXT PRIMARY KEY,
-    label               TEXT,
-    description         TEXT,
-    birth_date          TEXT,              -- ISO; año negativo = a.C.
+    label               TEXT,              -- etiqueta en inglés (fallback: mul, español)
+    label_es            TEXT,
+    description         TEXT,              -- descripción en inglés (fallback: español)
+    birth_date          TEXT,              -- ISO truncada a la precisión; '-0630' = 630 a.C.
+    birth_year          INTEGER,           -- año histórico; negativo = a.C.
     birth_precision     TEXT,              -- day | month | year | decade | century | millennium
+    birth_calendar      TEXT,              -- gregorian | julian (tal cual en Wikidata)
     death_date          TEXT,
+    death_year          INTEGER,
     death_precision     TEXT,
+    death_calendar      TEXT,
     birth_place_qid     TEXT,
     birth_place         TEXT,
     death_place_qid     TEXT,
     death_place         TEXT,
     gender              TEXT,
     sitelinks           INTEGER,
-    viaf_id             TEXT,
+    viaf_id             TEXT,              -- IDs externos: multivalor, separados por ' | '
     isni                TEXT,
     openlibrary_id      TEXT,
     goodreads_id        TEXT,
     wikipedia_en        TEXT,
     wikipedia_es        TEXT,
+    conflicting_fields  TEXT,              -- género/lugares/fechas con >1 valor de mejor rango
     retrieved_at        TEXT NOT NULL
 );
 
@@ -88,6 +94,31 @@ CREATE TABLE IF NOT EXISTS author_names (
     lang TEXT,
     PRIMARY KEY (qid, name, kind)
 );
+
+-- Vista plana: una fila por autor, multivalores separados por ' | '.
+CREATE VIEW IF NOT EXISTS v_authors_flat AS
+SELECT
+    a.*,
+    (SELECT group_concat(s.clean_name, ' | ') FROM seed_resolution r
+       JOIN seed_names s USING (seed_id) WHERE r.qid = a.qid)            AS seed_names,
+    (SELECT group_concat(occupation, ' | ') FROM
+       (SELECT occupation FROM author_occupations o WHERE o.qid = a.qid ORDER BY occupation)) AS occupations,
+    (SELECT group_concat(country, ' | ') FROM
+       (SELECT country FROM author_citizenships c WHERE c.qid = a.qid ORDER BY country))    AS citizenships,
+    (SELECT group_concat(language, ' | ') FROM
+       (SELECT language FROM author_languages l WHERE l.qid = a.qid ORDER BY language))     AS languages,
+    (SELECT group_concat(name, ' | ') FROM
+       (SELECT name FROM author_names n WHERE n.qid = a.qid AND n.kind = 'pseudonym' ORDER BY name)) AS pseudonyms
+FROM authors a;
+
+-- Trazabilidad fila del seed -> autor.
+CREATE VIEW IF NOT EXISTS v_seed_resolution AS
+SELECT s.seed_id, s.raw_name AS author_name, r.status, r.method,
+       round(r.confidence, 3) AS confidence, r.qid, a.label AS wikidata_label,
+       a.description AS wikidata_description, r.note
+FROM seed_names s
+LEFT JOIN seed_resolution r USING (seed_id)
+LEFT JOIN authors a ON a.qid = r.qid;
 """
 
 

@@ -140,7 +140,7 @@ def fetch_facts(client: WikidataClient, qids: list[str], batch: int = 150) -> di
 SELECT ?item ?sitelinks ?human ?writer ?works ?label WHERE {{
   VALUES ?item {{ {values} }}
   OPTIONAL {{ ?item wikibase:sitelinks ?sitelinks }}
-  OPTIONAL {{ ?item rdfs:label ?label FILTER(LANG(?label) = "en") }}
+  OPTIONAL {{ ?item rdfs:label ?label FILTER(LANG(?label) IN ("en", "mul")) }}
   BIND(EXISTS {{ ?item wdt:P31 ?cls VALUES ?cls {{ {human_values} }} }} AS ?human)
   BIND(EXISTS {{ ?item wdt:P106/wdt:P279* ?occ VALUES ?occ {{ {occ_values} }} }} AS ?writer)
   BIND(EXISTS {{ ?work wdt:P50 ?item }} AS ?works)

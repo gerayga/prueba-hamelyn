@@ -9,5 +9,8 @@ Enriquece `authors_seed.csv` con información pública de Wikidata y la guarda e
 ```bash
 python -m venv .venv
 .venv/Scripts/python -m pip install -e ".[dev]"   # en Linux/macOS: .venv/bin/python
-.venv/Scripts/python -m authors load
+.venv/Scripts/python -m authors run --offline   # reconstruye la BD solo desde data/cache
 ```
+
+Comandos: `load`, `resolve`, `enrich`, `export` y `run` (todos los anteriores, con la BD desde cero).
+Opciones: `--offline` (no usa la red), `--prune-cache` (con `run`), `--limit N`.
