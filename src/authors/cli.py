@@ -5,12 +5,15 @@ import logging
 import sqlite3
 from pathlib import Path
 
-from authors import db
+from authors import db, resolve
+from authors.wikidata import WikidataClient
 from authors.normalize import clean_name, match_key
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SEED = ROOT / "authors_seed.csv"
 DEFAULT_DB = ROOT / "data" / "authors.db"
+CACHE_DIR = ROOT / "data" / "cache"
+OVERRIDES = ROOT / "data" / "overrides.csv"
 
 log = logging.getLogger("authors")
 
@@ -38,8 +41,18 @@ def cmd_load(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     log.info("Cargadas %d filas del seed", len(rows))
 
 
+def cmd_resolve(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    client = WikidataClient(CACHE_DIR, offline=args.offline)
+    resolve.run(conn, client, OVERRIDES, limit=args.limit)
+    for row in conn.execute(
+        "SELECT status, COUNT(*) n FROM seed_resolution GROUP BY status ORDER BY n DESC"
+    ):
+        log.info("  %-13s %d", row["status"], row["n"])
+
+
 COMMANDS = {
     "load": cmd_load,
+    "resolve": cmd_resolve,
 }
 
 
@@ -48,6 +61,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--seed", type=Path, default=DEFAULT_SEED)
     parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("--offline", action="store_true",
+                        help="usar solo la caché de data/cache (sin red)")
+    parser.add_argument("--limit", type=int, help="procesar solo las N primeras filas")
     parser.add_argument("command", choices=list(COMMANDS))
     args = parser.parse_args(argv)
 

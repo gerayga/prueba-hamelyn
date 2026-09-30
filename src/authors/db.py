@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS candidates (
     description     TEXT,
     is_human        INTEGER NOT NULL,
     is_writer       INTEGER NOT NULL,
-    name_match      TEXT NOT NULL,         -- exact_label | alias | partial | none
+    name_match      TEXT NOT NULL,         -- exact_label | alias | partial
+    source          TEXT NOT NULL,         -- search | fulltext
     sitelinks       INTEGER NOT NULL,
     score           REAL NOT NULL,
     PRIMARY KEY (seed_id, qid)
@@ -31,7 +32,7 @@ CREATE TABLE IF NOT EXISTS seed_resolution (
     qid             TEXT,                  -- NULL si no hay match
     status          TEXT NOT NULL CHECK (status IN
                         ('matched','ambiguous','no_match','not_a_person')),
-    method          TEXT NOT NULL,         -- exact_label | alias | override | rule | none
+    method          TEXT NOT NULL,         -- exact_label | alias | partial | fulltext | override | rule | none
     confidence      REAL,                  -- 0..1
     note            TEXT
 );
