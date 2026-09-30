@@ -48,3 +48,15 @@ def test_decide_ambiguous_when_not_literary():
 def test_decide_no_match_without_humans():
     status, best, _, _ = decide([cand("Q1", human=False)])
     assert status == "no_match" and best is None
+
+
+def test_decide_dominance_overrides_small_margin():
+    # Caso John Milton: el homónimo (su padre) también es escritor pero muy menor.
+    status, best, _, _ = decide([cand("Q79759", sitelinks=155), cand("Q3809493", sitelinks=5)])
+    assert status == "matched" and best.qid == "Q79759"
+
+
+def test_decide_similar_notability_stays_ambiguous():
+    # Caso Mary Beard: 38 vs 28 sitelinks, ambas historiadoras.
+    status, _, _, _ = decide([cand("Q458403", sitelinks=38), cand("Q6780609", sitelinks=28)])
+    assert status == "ambiguous"

@@ -36,6 +36,13 @@ W_NAME, W_LITERARY, W_POPULARITY = 0.40, 0.35, 0.25
 NAME_SCORES = {"exact_label": 1.0, "alias": 0.8, "partial": 0.3}
 MATCH_THRESHOLD = 0.60
 MIN_MARGIN = 0.15
+# Si el mejor candidato tiene >= N veces los sitelinks del segundo, el margen de
+# score no se exige: el homónimo es una figura muy menor (p.ej. el padre de John Milton).
+DOMINANCE_RATIO = 5
+
+# Clases P31 que aceptamos como "persona". Q21070568 = humano cuya existencia se
+# discute (Homero); sin ella Homer se resolvía a Winslow Homer.
+HUMAN_CLASSES = ("Q5", "Q21070568")
 
 
 @dataclass
@@ -80,15 +87,17 @@ def decide(cands: list[Candidate]) -> tuple[str, Candidate | None, float | None,
     if not ranked:
         return "no_match", None, None, "ningún candidato humano"
     best = ranked[0]
-    second = ranked[1].score if len(ranked) > 1 else 0.0
-    margin = best.score - second
+    runner_up = ranked[1] if len(ranked) > 1 else None
+    margin = best.score - (runner_up.score if runner_up else 0.0)
+    dominant = runner_up is None or best.sitelinks >= DOMINANCE_RATIO * max(runner_up.sitelinks, 1)
     notes = []
     if not (best.is_writer or best.has_works):
         notes.append("sin ocupación literaria ni obras P50")
     if best.score < MATCH_THRESHOLD:
         notes.append(f"score {best.score:.2f} < {MATCH_THRESHOLD}")
-    if margin < MIN_MARGIN:
-        notes.append(f"margen {margin:.2f} con {ranked[1].qid} ({ranked[1].label})")
+    if margin < MIN_MARGIN and not dominant:
+        notes.append(f"margen {margin:.2f} con {runner_up.qid} ({runner_up.label}), "
+                     f"sitelinks {best.sitelinks} vs {runner_up.sitelinks}")
     status = "ambiguous" if notes else "matched"
     return status, best, best.score, "; ".join(notes)
 
@@ -123,6 +132,7 @@ def fulltext_candidates(client: WikidataClient, name: str) -> list[Candidate]:
 def fetch_facts(client: WikidataClient, qids: list[str], batch: int = 150) -> dict[str, dict]:
     facts: dict[str, dict] = {}
     occ_values = " ".join(f"wd:{q}" for q in LITERARY_OCCUPATIONS)
+    human_values = " ".join(f"wd:{q}" for q in HUMAN_CLASSES)
     qids = sorted(set(qids))
     for i in range(0, len(qids), batch):
         values = " ".join(f"wd:{q}" for q in qids[i:i + batch])
@@ -131,7 +141,7 @@ SELECT ?item ?sitelinks ?human ?writer ?works ?label WHERE {{
   VALUES ?item {{ {values} }}
   OPTIONAL {{ ?item wikibase:sitelinks ?sitelinks }}
   OPTIONAL {{ ?item rdfs:label ?label FILTER(LANG(?label) = "en") }}
-  BIND(EXISTS {{ ?item wdt:P31 wd:Q5 }} AS ?human)
+  BIND(EXISTS {{ ?item wdt:P31 ?cls VALUES ?cls {{ {human_values} }} }} AS ?human)
   BIND(EXISTS {{ ?item wdt:P106/wdt:P279* ?occ VALUES ?occ {{ {occ_values} }} }} AS ?writer)
   BIND(EXISTS {{ ?work wdt:P50 ?item }} AS ?works)
 }}"""
