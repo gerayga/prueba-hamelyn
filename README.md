@@ -12,5 +12,5 @@ python -m venv .venv
 .venv/Scripts/python -m authors run --offline   # reconstruye la BD solo desde data/cache
 ```
 
-Comandos: `load`, `resolve`, `enrich`, `export` y `run` (todos los anteriores, con la BD desde cero).
+Comandos: `load`, `resolve`, `enrich`, `export`, `report` y `run` (todos los anteriores, con la BD desde cero).
 Opciones: `--offline` (no usa la red), `--prune-cache` (con `run`), `--limit N`.

@@ -1,0 +1,267 @@
+# Informe de calidad
+
+> Generado por `python -m authors report` a partir de `data/authors.db`. Las cifras no se editan a mano; el análisis manual está en la última sección (`docs/quality_notes.md`).
+
+- Filas del seed: **500**. Autores únicos en la BD: **491**.
+- Datos descargados de Wikidata entre 2026-09-30T15:46:53Z y 2026-09-30T15:47:23Z (instantánea; Wikidata cambia continuamente).
+
+## 1. Resolución nombre → Wikidata
+
+| Estado | Filas | % |
+|---|---|---|
+| matched | 498 | 99.6% |
+| not_a_person | 2 | 0.4% |
+
+| Método | Filas |
+|---|---|
+| exact_label | 478 |
+| alias | 19 |
+| rule | 2 |
+| override | 1 |
+
+Distribución de la confianza (sin overrides):
+
+| Confianza | Filas |
+|---|---|
+| ≥ 0.90 | 411 |
+| 0.80–0.89 | 83 |
+| 0.60–0.79 | 3 |
+
+Reglas: umbral 0.6, margen mínimo 0.15 con el segundo candidato, salvo dominancia (≥ 5× sitelinks). Detalle en el README.
+
+## 2. Casos dudosos y decisiones
+
+### 2.1 Seudónimos / misma persona con varios nombres en el seed
+
+Varias filas del seed apuntan al mismo QID. Se conserva cada fila en `seed_resolution` y el autor aparece una sola vez en `authors`.
+
+| QID | Autor (Wikidata) | Filas del seed |
+|---|---|---|
+| Q298685 | Dr. Seuss | Dr. Seuss · Theodor Seuss Geisel |
+| Q131333 | George Eliot | George Eliot · Mary Ann Evans |
+| Q34660 | J. K. Rowling | J. K. Rowling · Robert Galbraith |
+| Q182804 | Karen Blixen | Karen Blixen · Isak Dinesen |
+| Q38082 | Lewis Carroll | Lewis Carroll · Charles Lutwidge Dodgson |
+| Q7245 | Mark Twain | Mark Twain · Samuel Clemens |
+| Q157322 | Romain Gary | Romain Gary · Émile Ajar |
+
+### 2.2 Entradas que no son personas
+
+| Seed | Motivo |
+|---|---|
+| Anonymous | nombre genérico, no es una persona |
+| Various Authors | nombre genérico, no es una persona |
+
+### 2.3 Overrides manuales
+
+| Seed | QID | Justificación |
+|---|---|---|
+| Mary Beard | Q458403 | override manual: Clasicista británica, autora de SPQR (38 sitelinks). Alternativa descartada: Mary Ritter Beard, Q6780609, historiadora estadounidense (28 sitelinks). El seed la agrupa con divulgación contemporánea (Harari, Diamond) |
+
+### 2.4 Resueltos por dominancia de notoriedad (margen de score pequeño)
+
+El mejor candidato apenas supera al segundo en score (homónimo también escritor), pero tiene ≥ 5× sus sitelinks. Revisión manual en §7.
+
+| Seed | Elegido | Sitelinks | 2º candidato | Etiqueta | Descripción | Sitelinks | Margen |
+|---|---|---|---|---|---|---|---|
+| Mario Benedetti | Q16285 | 46 | Q3848323 | Mario Benedetti | Italian poet and teacher (1955-2020) | 2 | 0.12 |
+| Robert Galbraith | Q34660 | 181 | Q7344653 | Robert Galbraith | Scottish Lord of Session | 2 | 0.1 |
+| John Milton | Q79759 | 155 | Q3809493 | John Milton | Father of poet John Milton and English composer (1563-1647) | 5 | 0.14 |
+| Samuel Johnson | Q183266 | 134 | Q2791832 | Samuel Johnson | President of Columbia University (1696-1772) | 11 | 0.11 |
+| Robert Browning | Q233265 | 98 | Q504999 | Robert Browning | Scottish Byzantinist and university professor (1914–1997) | 10 | 0.1 |
+| Henry James | Q170509 | 100 | Q5723817 | Henry James | American biographer (1879–1947) | 3 | 0.14 |
+| W. B. Yeats | Q40213 | 154 | Q5548182 | Georgie Hyde-Lees | esposa de William Butler Yeats | 5 | 0.14 |
+| James Baldwin | Q273210 | 81 | Q15976232 | James Baldwin | American editor and author (1841-1925) | 4 | 0.12 |
+| Bruno Schulz | Q148886 | 57 | Q993768 | Bruno Schulz | German architectural historian (1865–1932) | 5 | 0.1 |
+| Primo Levi | Q153670 | 92 | Q18606682 | Primo Levi | journalist from Italy (1853-1917) | 4 | 0.13 |
+| Nguyễn Du | Q313322 | 37 | Q10799084 | Nguyễn Dữ | 16th-century Vietnamese writer | 4 | 0.09 |
+| Jane Goodall | Q184746 | 122 | Q6152650 | Jane R. Goodall | escritora australiana | 4 | 0.04 |
+
+### 2.5 Resueltos por alias (el nombre del seed no es la etiqueta principal)
+
+| Seed | QID | Etiqueta Wikidata | Confianza |
+|---|---|---|---|
+| João Guimarães Rosa | Q13012 | Guimarães Rosa | 0.83 |
+| Eça de Queirós | Q316327 | José Maria de Eça de Queirós | 0.84 |
+| Luandino Vieira | Q558950 | José Luandino Vieira | 0.8 |
+| Calderón de la Barca | Q170800 | Pedro Calderón de la Barca | 0.87 |
+| Robert Galbraith | Q34660 | J. K. Rowling | 0.9 |
+| Charles Lutwidge Dodgson | Q38082 | Lewis Carroll | 0.89 |
+| Samuel Clemens | Q7245 | Mark Twain | 0.91 |
+| Mary Ann Evans | Q131333 | George Eliot | 0.88 |
+| L. M. Montgomery | Q273034 | Lucy Maud Montgomery | 0.85 |
+| W. B. Yeats | Q40213 | William Butler Yeats | 0.89 |
+| Fyodor Dostoevsky | Q991 | Fyodor Dostoyevsky | 0.91 |
+| Émile Ajar | Q157322 | Romain Gary | 0.85 |
+| S. Y. Agnon | Q133042 | Shmuel Yosef Agnon | 0.87 |
+| Isak Dinesen | Q182804 | Karen Blixen | 0.87 |
+| Kyung-sook Shin | Q384293 | Shin Kyung-sook | 0.82 |
+| Tayeb Salih | Q561434 | al-Tayyib Salih | 0.83 |
+| Saadi Shirazi | Q170302 | Saadi | 0.88 |
+| Forough Farrokhzad | Q464394 | Forugh Farrokhzad | 0.85 |
+| Theodor Seuss Geisel | Q298685 | Dr. Seuss | 0.86 |
+
+### 2.6 Confianza más baja (fuera de overrides)
+
+| Seed | QID | Etiqueta | Descripción | Confianza |
+|---|---|---|---|---|
+| Marjane Satrapi | Q126633 | Marjane Satrapi | Iranian-French graphic novelist, cartoonist, illustrator, film director, and children's book author (1969–2026) | 0.76 |
+| Jane Goodall | Q184746 | Jane Goodall | English primatologist and anthropologist (1934–2025) | 0.78 |
+| Luandino Vieira | Q558950 | José Luandino Vieira | Angolan writer | 0.8 |
+| Shamini Flint | Q7487568 | Shamini Flint | author based in Singapore | 0.81 |
+| Kyung-sook Shin | Q384293 | Shin Kyung-sook | South Korean writer | 0.82 |
+| Tayeb Salih | Q561434 | al-Tayyib Salih | Sudanese novelist and short story writer (1929–2009) | 0.83 |
+| João Guimarães Rosa | Q13012 | Guimarães Rosa | Brazilian novelist (1908-1967) | 0.83 |
+| Miguel Syjuco | Q1768256 | Miguel Syjuco | Filipino writer | 0.84 |
+| Eça de Queirós | Q316327 | José Maria de Eça de Queirós | Portuguese writer and diplomat (1845–1900) | 0.84 |
+| Forough Farrokhzad | Q464394 | Forugh Farrokhzad | Iranian poet (1935-1967) | 0.85 |
+
+## 3. Completitud de los atributos
+
+| Campo | Autores | % |
+|---|---|---|
+| label | 491 | 100.0% |
+| label_es | 491 | 100.0% |
+| description | 491 | 100.0% |
+| birth_date | 491 | 100.0% |
+| death_date | 356 | 72.5% |
+| birth_place | 490 | 99.8% |
+| death_place | 353 | 71.9% |
+| gender | 491 | 100.0% |
+| viaf_id | 491 | 100.0% |
+| isni | 491 | 100.0% |
+| openlibrary_id | 478 | 97.4% |
+| goodreads_id | 434 | 88.4% |
+| wikipedia_en | 491 | 100.0% |
+| wikipedia_es | 483 | 98.4% |
+| ≥1 ocupación | 491 | 100.0% |
+| ≥1 nacionalidad | 488 | 99.4% |
+| ≥1 idioma | 490 | 99.8% |
+
+`death_date` vacío es esperable en autores vivos: ningún autor sin fecha de muerte nació antes de 1926 (0 casos).
+
+## 4. Fechas
+
+Precisión de la fecha de nacimiento:
+
+| Precisión | Autores |
+|---|---|
+| day | 461 |
+| month | 2 |
+| year | 19 |
+| decade | 6 |
+| century | 3 |
+
+- **16** autores nacidos antes de Cristo (año negativo, sin desplazamiento de año 0): Homer (-0900, century), Sappho (-0650, century), Laozi (-0579, century), Confucius (-0551, year), Sun Tzu (-0544, year), Aeschylus (-0525, year), Sophocles (-0496, year), Herodotus (-0484, year), Euripides (-0480, decade), Thucydides (-0460, decade), Plato (-0428, decade), Aristotle (-0384, year), Virgil (-0070-10-15, day), Horace (-0065-12-08, day), Ovid (-0043-03-20, day), Seneca (-0004, decade).
+- **35** fechas de nacimiento en calendario juliano, guardadas tal cual (sin convertir).
+- Las fechas con precisión inferior a día deben leerse junto con `*_precision`: `-0650` con precisión `century` significa «siglo VII a.C.», no el año 650.
+
+### Valores en conflicto
+
+Campos univaluados con varios valores de mejor rango en Wikidata. Se elige uno de forma determinista y se marca en `conflicting_fields`.
+
+| Campos | Autores |
+|---|---|
+| birth_place | 20 |
+| death_place | 11 |
+| birth_date | 5 |
+| birth_place,death_place | 3 |
+| birth_place,birth_date | 2 |
+| death_date | 1 |
+| birth_date,death_date | 1 |
+
+Autores con conflicto en fechas:
+
+| Autor | Nacimiento | Precisión | Muerte | Precisión | Conflictos |
+|---|---|---|---|---|---|
+| Bapsi Sidhwa | 1938-08-11 | day | 2024-12-25 | day | birth_date |
+| Eileen Chang | 1920-09-30 | day | 1995-09-08 | day | birth_place,birth_date |
+| Ismat Chughtai | 1915-08-15 | day | 1991-10-24 | day | birth_date,death_date |
+| José Martínez Ruiz | 1873-06-08 | day | 1967-03-03 | day | birth_date |
+| Lygia Fagundes Telles | 1918-04-19 | day | 2022-04-03 | day | birth_place,birth_date |
+| Nâzım Hikmet | 1902-01-15 | day | 1963-06-03 | day | birth_date |
+| Rosario Castellanos | 1925-05-25 | day | 1974-08-07 | day | birth_date |
+| Sadegh Hedayat | 1903-02-17 | day | 1951-04-09 | day | birth_date |
+| Sun Tzu | -0544 | year | -0496 | year | death_date |
+
+## 5. Comprobaciones de consistencia
+
+| Comprobación | Casos | Resultado |
+|---|---|---|
+| Muerte anterior al nacimiento | 0 | OK |
+| Vida > 105 años | 1 | revisar |
+| Sin fecha de muerte y nacido antes de 1926 | 0 | OK |
+| Autor sin ocupación literaria ni obras (P50) | 0 | OK |
+| Fila del seed sin autor enriquecido | 0 | OK |
+
+**Vida > 105 años**
+
+|  |  |  |
+|---|---|---|
+| Murasaki Shikibu | 0970 (decade) | 1100 (century) |
+
+## 6. Muestra aleatoria para verificación manual
+
+20 filas `matched` elegidas con semilla fija (20260930). El resultado de la verificación está en la sección 7.
+
+| # | Seed | QID | Etiqueta | Descripción | Nacimiento |
+|---|---|---|---|---|---|
+| 12 | Carmen Laforet | Q269123 | Carmen Laforet | Spanish author (1921-2004) | 1921-09-06 |
+| 26 | Juan Rulfo | Q200661 | Juan Rulfo | Mexican writer (1917–1986) | 1917-05-16 |
+| 114 | Mark Twain | Q7245 | Mark Twain | American author and humorist (1835–1910) | 1835-11-30 |
+| 158 | Rudyard Kipling | Q34743 | Rudyard Kipling | English writer and poet (1865–1936) | 1865-12-30 |
+| 208 | Chimamanda Ngozi Adichie | Q230141 | Chimamanda Ngozi Adichie | Nigerian writer (born 1977) | 1977-09-15 |
+| 215 | Cormac McCarthy | Q272610 | Cormac McCarthy | American novelist, playwright, and screenwriter (1933–2023) | 1933-07-20 |
+| 237 | Pierre Corneille | Q747 | Pierre Corneille | French tragedian (1606–1684) | 1606-06-06 |
+| 257 | Heinrich Heine | Q44403 | Heinrich Heine | German poet, writer and literary critic (1797–1856) | 1797-12-13 |
+| 291 | Luigi Pirandello | Q1403 | Luigi Pirandello | Italian dramatist, novelist, short story writer and poet (1867-1936) | 1867-06-28 |
+| 323 | Jo Nesbø | Q202693 | Jo Nesbø | Norwegian novelist, musician and economist | 1960-03-29 |
+| 328 | Tove Jansson | Q102071 | Tove Jansson | Finnish children's writer and illustrator (1914–2001) | 1914-08-09 |
+| 330 | Halldór Laxness | Q80321 | Halldór Laxness | Icelandic author (1902-1998) | 1902-04-23 |
+| 346 | Yasunari Kawabata | Q43736 | Yasunari Kawabata | Japanese novelist (1899–1972) | 1899-06-11 |
+| 363 | Mo Yan | Q8998 | Mo Yan | Chinese novelist and screenwriter | 1955-02-17 |
+| 365 | Lao She | Q315167 | Lao She | Chinese writer, novelist and playwright (1899-1966) | 1899-02-03 |
+| 369 | Can Xue | Q1072531 | Can Xue | Chinese writer, literary critic, and tailor | 1953-05-30 |
+| 374 | Rabindranath Tagore | Q7241 | Rabindranath Tagore | Bengali poet, philosopher and polymath (1861–1941) | 1861-05-07 |
+| 385 | Ismat Chughtai | Q3080325 | Ismat Chughtai | Indian writer (1911-1991) | 1915-08-15 |
+| 421 | Abraham Verghese | Q1446797 | Abraham Verghese | American physician, teacher, novelist | 1955-05-30 |
+| 482 | Douglas Adams | Q42 | Douglas Adams | British science fiction writer and humorist (1952–2001) | 1952-03-11 |
+
+## 7. Análisis manual
+
+> Esta sección está escrita a mano (`docs/quality_notes.md`); el resto del informe se genera desde los datos.
+
+### 7.1 Qué se ha revisado y cómo
+
+| Revisión | Alcance | Resultado |
+|---|---|---|
+| Casos `ambiguous` de la primera ejecución (hoy en §2.3 y §2.4) | 14/14 | 13 correctos (resueltos después con la regla de dominancia) y 1 incorrecto: Homer → Winslow Homer. Se corrigió aceptando Q21070568 («humano cuya existencia se discute») como persona. |
+| Nombres de una sola palabra (Homer, Colette, Azorín, Adonis…) | 27/27 | Todos correctos. Azorín resuelve a José Martínez Ruiz (Q443403), Adonis al poeta sirio. |
+| Seudónimos / nombres reales del seed | 7 pares | Los 7 resuelven al mismo QID de forma automática (§2.1). |
+| Resueltos por alias (§2.5) | todos | Correctos: variantes de transliteración (Dostoevsky/Dostoyevsky, Forough/Forugh), formas cortas (Guimarães Rosa, Eça de Queirós) y seudónimos. |
+| Muestra aleatoria (§6) | 20 filas | **20/20 QIDs correctos.** Fechas de nacimiento comparadas con fuentes de referencia: 19/20 coinciden. La que no coincidía era Ismat Chughtai (ver 7.2). |
+| Diff entre ejecuciones al cambiar reglas | 500 filas | Cada cambio de reglas se validó comparando la resolución antes y después; solo cambian los casos previstos (ver `ai-usage/`). |
+| Reproducibilidad | exports completos | `run --offline` produce CSV idénticos byte a byte a los commiteados (`tests/test_pipeline.py`). |
+
+La revisión de QIDs y fechas la hizo el asistente de IA con conocimiento general, y el candidato la supervisó (ver `ai-usage/`). No es una verificación contra una fuente externa independiente, y así se declara.
+
+### 7.2 Casos dudosos comentados
+
+- **Mary Beard** (único override). Hay dos candidatas con notoriedad parecida: la clasicista británica (38 sitelinks) y la historiadora estadounidense Mary Ritter Beard (28). La regla no decide sola y se resolvió manualmente por contexto: el seed agrupa divulgación contemporánea (Harari, Diamond, Sagan). La justificación queda en `data/overrides.csv`.
+- **Ismat Chughtai.** Wikidata tiene 5 fechas de nacimiento de rango normal (1911, 1915 y 1925, con días distintos). El desempate original («la primera que devuelve el API») daba 1911. Se cambió a «más referencias, sin contar P143 (importado de Wikipedia)», y ahora da 1915-08-15. El año coincide con la fuente de referencia (21-08-1915); el día sigue discutido. Queda marcado en `conflicting_fields`. El mismo cambio corrigió la fecha de muerte de Sadegh Hedayat (04-04 → 09-04-1951).
+- **Murasaki Shikibu.** Aparece en la comprobación «vida > 105 años» (970–1100), pero es un efecto de la precisión, no un error. El valor preferente de muerte es `1100` con precisión de siglo, es decir, «siglo XI». Por eso las fechas deben leerse siempre junto con `*_precision`.
+- **Homero, Laozi, Safo y otros autores antiguos.** Las fechas son aproximaciones con precisión de siglo o década y, en varios casos, con muchos valores alternativos en Wikidata. Se toma el de rango preferente.
+- **Robert Galbraith → J. K. Rowling.** Existe en Wikidata una entidad «Robert Galbraith» (juez escocés) con el nombre exacto. Gana Rowling porque el alias coincide, es escritora y tiene 181 sitelinks frente a 2. Es la decisión correcta para una base de datos de autores de libros, pero depende de la regla de notoriedad (ver 7.3).
+- **Autores de no ficción y ciencia** (Hawking, Sagan, Goodall, Kahneman…). Se aceptan como autores porque tienen obras con P50 o una ocupación de escritor. Jane Goodall se resuelve a la primatóloga y no a la escritora australiana homónima (Jane R. Goodall, 4 sitelinks).
+
+### 7.3 Limitaciones
+
+1. **Una sola fuente.** Todo sale de Wikidata. Hereda sus sesgos de cobertura: los autores occidentales y canónicos están mejor descritos. Las 500 filas del seed son autores conocidos, así que la cobertura del 100 % no se extrapola a una lista de autores poco conocidos.
+2. **La notoriedad como desempate.** La puntuación y la regla de dominancia favorecen al homónimo más famoso. Es lo correcto para este seed, pero fallaría si la lista incluyera a un autor menor con el mismo nombre que otro famoso. Sin contexto adicional (por ejemplo, un ISBN o un título de obra en el seed) no se puede distinguir.
+3. **Pesos heurísticos no calibrados.** Los pesos (0,40 nombre / 0,35 perfil literario / 0,25 notoriedad) y los umbrales se ajustaron observando este seed, no contra un conjunto etiquetado. La mitigación es que cada decisión es trazable (`candidates`, `seed_resolution.note`) y los casos límite se listan en este informe.
+4. **Búsqueda solo en inglés y español.** Todos los nombres del seed están en alfabeto latino. Para nombres en otras escrituras habría que añadir idiomas de búsqueda.
+5. **Instantánea.** Los datos reflejan Wikidata en la fecha de descarga (`retrieved_at`). Una ejecución online posterior puede dar resultados distintos; la caché permite reproducir exactamente esta versión.
+6. **Selección de valores únicos.** Para lugares con varios valores sin rango preferente se elige el de menor QID. Es determinista pero arbitrario, y queda marcado en `conflicting_fields`.
+7. **Lista de no-personas escrita a mano** (`Anonymous`, `Various Authors`…). Una lista nueva podría traer otros genéricos («Anónimo», «VV. AA.», «Unknown»). Los más comunes ya están incluidos.
+8. **Seudónimos.** Cada fila del seed apunta a la persona real. El seudónimo se conserva como nombre (`author_names`, `kind='pseudonym'`), pero no como entidad propia. Si se necesitara atribuir obras al seudónimo, habría que modelarlo aparte.
+9. **Etiquetas en inglés.** Nombres de lugares, ocupaciones e idiomas se guardan en inglés, con respaldo en `mul` y español. `label_es` sí se guarda para el nombre del autor.

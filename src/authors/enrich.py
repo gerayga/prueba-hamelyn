@@ -106,6 +106,12 @@ def best_rank(items: list[dict], rank_key=lambda x: x["rank"]) -> list[dict]:
     return preferred or live
 
 
+def count_references(claim: dict) -> int:
+    """Nº de referencias, sin contar 'imported from Wikimedia project' (P143),
+    que solo indica de qué Wikipedia se copió el dato, no una fuente."""
+    return sum(1 for r in claim.get("references", []) if set(r.get("snaks", {})) != {"P143"})
+
+
 def pick_date(claims: list[dict]) -> tuple[dict | None, bool]:
     """Devuelve (fecha elegida, hay_conflicto)."""
     parsed = []
@@ -121,11 +127,13 @@ def pick_date(claims: list[dict]) -> tuple[dict | None, bool]:
             "date": date, "year": year, "precision_num": v["precision"],
             "precision": PRECISION_NAMES.get(v["precision"], str(v["precision"])),
             "calendar": CALENDARS.get(v["calendarmodel"], v["calendarmodel"]),
+            "refs": count_references(c),
         })
     best = best_rank(parsed)
     if not best:
         return None, False
-    chosen = max(best, key=lambda d: d["precision_num"])  # max() conserva el primero en empates
+    # Desempate: más precisa > más referencias > orden del API (max conserva el primero).
+    chosen = max(best, key=lambda d: (d["precision_num"], d["refs"]))
     conflict = len({d["year"] for d in best}) > 1
     return chosen, conflict
 

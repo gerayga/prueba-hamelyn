@@ -5,7 +5,7 @@ import logging
 import sqlite3
 from pathlib import Path
 
-from authors import db, enrich, export, resolve
+from authors import db, enrich, export, report, resolve
 from authors.wikidata import WikidataClient
 from authors.normalize import clean_name, match_key
 
@@ -15,6 +15,8 @@ DEFAULT_DB = ROOT / "data" / "authors.db"
 CACHE_DIR = ROOT / "data" / "cache"
 OVERRIDES = ROOT / "data" / "overrides.csv"
 EXPORT_DIR = ROOT / "data" / "export"
+REPORT = ROOT / "QUALITY_REPORT.md"
+QUALITY_NOTES = ROOT / "docs" / "quality_notes.md"
 
 log = logging.getLogger("authors")
 
@@ -63,12 +65,16 @@ def cmd_enrich(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
 
 
 def cmd_export(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
-    export.run(conn, EXPORT_DIR)
+    export.run(conn, args.export_dir)
+
+
+def cmd_report(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
+    report.run(conn, args.report, QUALITY_NOTES)
 
 
 def cmd_run(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
     """Pipeline completo. La BD se reconstruye desde cero (la caché se conserva)."""
-    for step in (cmd_load, cmd_resolve, cmd_enrich, cmd_export):
+    for step in (cmd_load, cmd_resolve, cmd_enrich, cmd_export, cmd_report):
         log.info("== %s ==", step.__name__.removeprefix("cmd_"))
         step(conn, args)
     if args.prune_cache:
@@ -80,6 +86,7 @@ COMMANDS = {
     "resolve": cmd_resolve,
     "enrich": cmd_enrich,
     "export": cmd_export,
+    "report": cmd_report,
     "run": cmd_run,
 }
 
@@ -88,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="authors")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--seed", type=Path, default=DEFAULT_SEED)
+    parser.add_argument("--export-dir", type=Path, default=EXPORT_DIR)
+    parser.add_argument("--report", type=Path, default=REPORT)
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--offline", action="store_true",
                         help="usar solo la caché de data/cache (sin red)")
