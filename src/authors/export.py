@@ -17,8 +17,7 @@ def run(conn: sqlite3.Connection, out_dir: Path) -> None:
     for name, query in EXPORTS.items():
         cur = conn.execute(query)
         with open(out_dir / name, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f, lineterminator="
-")
+            writer = csv.writer(f, lineterminator="\n")
             writer.writerow([d[0] for d in cur.description])
             rows = cur.fetchall()
             writer.writerows(rows)
