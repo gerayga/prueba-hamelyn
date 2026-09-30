@@ -142,6 +142,7 @@ def run(conn: sqlite3.Connection, client: WikidataClient) -> None:
     qids = sorted({r[0] for r in conn.execute(
         "SELECT DISTINCT qid FROM seed_resolution WHERE qid IS NOT NULL")})
     log.info("Enriqueciendo %d autores", len(qids))
+    hits0, misses0 = client.hits, client.misses
 
     core, statements, aliases = {}, [], []
     for i in range(0, len(qids), BATCH):
@@ -220,4 +221,4 @@ def run(conn: sqlite3.Connection, client: WikidataClient) -> None:
 
         conn.executemany("INSERT OR IGNORE INTO author_names VALUES (?,?,'alias',?)", aliases)
 
-    log.info("Enriquecimiento: %d peticiones desde caché, %d nuevas", client.hits, client.misses)
+    log.info("Enriquecimiento: %d peticiones desde caché, %d nuevas", client.hits - hits0, client.misses - misses0)

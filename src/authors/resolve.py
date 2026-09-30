@@ -173,6 +173,7 @@ def run(conn: sqlite3.Connection, client: WikidataClient, overrides_path: Path,
         + (f" LIMIT {int(limit)}" if limit else "")
     ).fetchall()
     overrides = load_overrides(overrides_path)
+    hits0, misses0 = client.hits, client.misses
 
     per_seed: dict[int, list[Candidate]] = {}
     for n, s in enumerate(seeds, 1):
@@ -249,4 +250,4 @@ def run(conn: sqlite3.Connection, client: WikidataClient, overrides_path: Path,
                 "INSERT INTO seed_resolution (seed_id, qid, status, method, confidence, note)"
                 " VALUES (?,?,?,?,?,?)", row)
 
-    log.info("Resolución: %d peticiones desde caché, %d nuevas", client.hits, client.misses)
+    log.info("Resolución: %d peticiones desde caché, %d nuevas", client.hits - hits0, client.misses - misses0)
