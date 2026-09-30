@@ -24,3 +24,12 @@
 
 ## Pendiente de validar por el candidato
 - Las reglas de matching y los umbrales de confianza (ver el plan).
+
+## Decisiones confirmadas tras el plan
+- Commitear `data/cache/` para reproducibilidad offline: **sí**.
+- Casos ambiguos: **(b)** guardar el mejor candidato con baja confianza + **(c)** `data/overrides.csv` con resoluciones manuales del candidato.
+
+## Paso 1 completado
+- Esqueleto del paquete (`src/authors`), esquema SQLite, normalización de nombres, comando `load` idempotente y tests de normalización.
+- Repo creado en GitHub como privado: `gerayga/prueba-hamelyn`.
+- Validado: 500 filas cargadas, `load` ejecutado dos veces sin duplicar, 2 tests OK.
