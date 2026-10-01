@@ -33,17 +33,29 @@ Reglas: umbral 0.6, margen mínimo 0.15 con el segundo candidato, salvo dominanc
 
 ### 2.1 Seudónimos / misma persona con varios nombres en el seed
 
-Varias filas del seed apuntan al mismo QID. Se conserva cada fila en `seed_resolution` y el autor aparece una sola vez en `authors`.
+Varias filas del seed apuntan al mismo QID. Se conserva cada fila en `seed_resolution` y el autor aparece una sola vez en `authors`. Entre paréntesis, `name_type`: qué nombre del autor usa esa fila (`pseudonym` = registrado como seudónimo en P742, aunque sea también la etiqueta principal; `birth_name` = nombre de nacimiento P1477; `alias` = otra forma registrada).
 
-| QID | Autor (Wikidata) | Filas del seed |
+| QID | Autor (Wikidata) | Filas del seed (name_type) |
 |---|---|---|
-| Q298685 | Dr. Seuss | Dr. Seuss · Theodor Seuss Geisel |
-| Q131333 | George Eliot | George Eliot · Mary Ann Evans |
-| Q34660 | J. K. Rowling | J. K. Rowling · Robert Galbraith |
-| Q182804 | Karen Blixen | Karen Blixen · Isak Dinesen |
-| Q38082 | Lewis Carroll | Lewis Carroll · Charles Lutwidge Dodgson |
-| Q7245 | Mark Twain | Mark Twain · Samuel Clemens |
-| Q157322 | Romain Gary | Romain Gary · Émile Ajar |
+| Q298685 | Dr. Seuss | Dr. Seuss (pseudonym) · Theodor Seuss Geisel (alias) |
+| Q131333 | George Eliot | George Eliot (pseudonym) · Mary Ann Evans (alias) |
+| Q34660 | J. K. Rowling | J. K. Rowling (main) · Robert Galbraith (pseudonym) |
+| Q182804 | Karen Blixen | Karen Blixen (main) · Isak Dinesen (pseudonym) |
+| Q38082 | Lewis Carroll | Lewis Carroll (pseudonym) · Charles Lutwidge Dodgson (birth_name) |
+| Q7245 | Mark Twain | Mark Twain (pseudonym) · Samuel Clemens (birth_name) |
+| Q157322 | Romain Gary | Romain Gary (pseudonym) · Émile Ajar (pseudonym) |
+
+Tipo de nombre en todas las filas resueltas del seed:
+
+| name_type | Filas |
+|---|---|
+| main | 438 |
+| pseudonym | 42 |
+| alias | 11 |
+| birth_name | 5 |
+| other | 2 |
+
+Los nombres reales solo se reconocen si Wikidata registra el nombre de nacimiento con una forma compatible: «Mary Ann Evans» (Wikidata: «Mary Anne Evans») y «Theodor Seuss Geisel» (sin P1477) quedan como `alias`.
 
 ### 2.2 Entradas que no son personas
 

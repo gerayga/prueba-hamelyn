@@ -15,7 +15,7 @@ import logging
 import sqlite3
 from collections import defaultdict
 
-from authors.normalize import CALENDARS, PRECISION_NAMES, parse_wikidata_time
+from authors.normalize import CALENDARS, PRECISION_NAMES, match_key, parse_wikidata_time
 from authors.wikidata import WikidataClient
 
 log = logging.getLogger(__name__)
@@ -138,6 +138,48 @@ def pick_date(claims: list[dict]) -> tuple[dict | None, bool]:
     return chosen, conflict
 
 
+NAME_TYPE_PRIORITY = ("pseudonym", "main", "birth_name", "alias")
+
+
+def classify_name_type(seed_key: str, names: dict[str, set[str]]) -> str:
+    """Qué tipo de nombre del autor es el que aparece en el seed.
+
+    `names` agrupa las claves de comparación (match_key) del autor por tipo:
+    pseudonym (P742), main (etiquetas), birth_name (P1477), alias.
+    Prioridad: un seudónimo se marca como tal aunque sea también la etiqueta
+    principal (Mark Twain). Para el nombre de nacimiento basta con que todas
+    las palabras del seed estén en él y empiece igual ('Samuel Clemens' ⊂
+    'Samuel Langhorne Clemens'); 'Calderón de la Barca' no cuenta frente a
+    'Pedro Calderón de la Barca' porque es una forma abreviada, no el nombre real.
+    """
+    seed_tokens = seed_key.split()
+    for kind in NAME_TYPE_PRIORITY:
+        for name in names.get(kind, ()):
+            if seed_key == name:
+                return kind
+            name_tokens = name.split()
+            if (kind == "birth_name" and len(seed_tokens) >= 2
+                    and seed_tokens[0] == name_tokens[0] and set(seed_tokens) <= set(name_tokens)):
+                return kind
+    return "other"
+
+
+def classify_seed_names(conn: sqlite3.Connection) -> None:
+    """Rellena seed_resolution.name_type para las filas con autor."""
+    names: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    for qid, label, label_es in conn.execute("SELECT qid, label, label_es FROM authors"):
+        for lbl in (label, label_es):
+            if lbl:
+                names[qid]["main"].add(match_key(lbl))
+    for qid, name, kind in conn.execute("SELECT qid, name, kind FROM author_names"):
+        names[qid][kind].add(match_key(name))
+    rows = conn.execute("""SELECT r.seed_id, r.qid, s.match_key FROM seed_resolution r
+                           JOIN seed_names s USING (seed_id) WHERE r.qid IS NOT NULL""").fetchall()
+    conn.execute("UPDATE seed_resolution SET name_type = NULL")
+    conn.executemany("UPDATE seed_resolution SET name_type = ? WHERE seed_id = ?",
+                     [(classify_name_type(key, names[qid]), sid) for sid, qid, key in rows])
+
+
 def run(conn: sqlite3.Connection, client: WikidataClient) -> None:
     qids = sorted({r[0] for r in conn.execute(
         "SELECT DISTINCT qid FROM seed_resolution WHERE qid IS NOT NULL")})
@@ -220,5 +262,6 @@ def run(conn: sqlite3.Connection, client: WikidataClient) -> None:
                 log.info("Enriquecidos %d/%d", n, len(qids))
 
         conn.executemany("INSERT OR IGNORE INTO author_names VALUES (?,?,'alias',?)", aliases)
+        classify_seed_names(conn)
 
     log.info("Enriquecimiento: %d peticiones desde caché, %d nuevas", client.hits - hits0, client.misses - misses0)

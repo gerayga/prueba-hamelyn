@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS seed_resolution (
                         ('matched','ambiguous','no_match','not_a_person')),
     method          TEXT NOT NULL,         -- exact_label | alias | partial | fulltext | override | rule | none
     confidence      REAL,                  -- 0..1
-    note            TEXT
+    note            TEXT,
+    name_type       TEXT CHECK (name_type IN   -- qué nombre del autor usa el seed (se rellena en enrich)
+                        ('pseudonym','main','birth_name','alias','other'))
 );
 
 CREATE TABLE IF NOT EXISTS authors (
@@ -114,7 +116,7 @@ FROM authors a;
 -- Trazabilidad fila del seed -> autor.
 CREATE VIEW IF NOT EXISTS v_seed_resolution AS
 SELECT s.seed_id, s.raw_name AS author_name, r.status, r.method,
-       round(r.confidence, 3) AS confidence, r.qid, a.label AS wikidata_label,
+       round(r.confidence, 3) AS confidence, r.qid, r.name_type, a.label AS wikidata_label,
        a.description AS wikidata_description, r.note
 FROM seed_names s
 LEFT JOIN seed_resolution r USING (seed_id)

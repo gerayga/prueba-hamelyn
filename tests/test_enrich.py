@@ -1,4 +1,4 @@
-from authors.enrich import count_references, pick_date
+from authors.enrich import classify_name_type, count_references, pick_date
 
 
 def claim(time, precision, rank="normal", refs=()):
@@ -42,3 +42,33 @@ def test_count_references_excludes_imported_from():
 def test_unknown_value_is_skipped():
     unknown = {"rank": "normal", "mainsnak": {"snaktype": "somevalue"}}
     assert pick_date([unknown]) == (None, False)
+
+
+def test_name_type_pseudonym_wins_over_main_label():
+    names = {"pseudonym": {"mark twain"}, "main": {"mark twain"},
+             "birth_name": {"samuel langhorne clemens"}}
+    assert classify_name_type("mark twain", names) == "pseudonym"
+
+
+def test_name_type_birth_name_by_token_subset():
+    names = {"main": {"mark twain"}, "birth_name": {"samuel langhorne clemens"},
+             "alias": {"samuel clemens"}}
+    assert classify_name_type("samuel clemens", names) == "birth_name"
+
+
+def test_name_type_single_token_is_not_birth_name_subset():
+    # 'samuel' a secas no debe contar como nombre de nacimiento.
+    assert classify_name_type("samuel", {"birth_name": {"samuel langhorne clemens"}}) == "other"
+
+
+def test_name_type_alias_and_other():
+    names = {"main": {"fyodor dostoyevsky"}, "alias": {"fyodor dostoevsky"}}
+    assert classify_name_type("fyodor dostoevsky", names) == "alias"
+    assert classify_name_type("andrey platonov", {"main": {"andrei platonov"}}) == "other"
+
+
+def test_name_type_short_form_is_not_birth_name():
+    names = {"main": {"pedro calderon de la barca"},
+             "birth_name": {"pedro calderon de la barca y barreda"},
+             "alias": {"calderon de la barca"}}
+    assert classify_name_type("calderon de la barca", names) == "alias"

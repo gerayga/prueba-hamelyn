@@ -69,14 +69,25 @@ def build(conn: sqlite3.Connection, notes_path: Path) -> str:
     w("## 2. Casos dudosos y decisiones\n")
 
     w("### 2.1 Seudónimos / misma persona con varios nombres en el seed\n")
-    rows = q("""SELECT r.qid, a.label, group_concat(s.clean_name, ' · ')
+    rows = q("""SELECT r.qid, a.label, group_concat(s.clean_name || ' (' || r.name_type || ')', ' · ')
                 FROM seed_resolution r JOIN seed_names s USING (seed_id)
                 JOIN authors a USING (qid)
                 GROUP BY r.qid HAVING COUNT(*) > 1 ORDER BY a.label""")
     w("Varias filas del seed apuntan al mismo QID. Se conserva cada fila en "
-      "`seed_resolution` y el autor aparece una sola vez en `authors`.\n")
-    w(_table(["QID", "Autor (Wikidata)", "Filas del seed"], rows))
+      "`seed_resolution` y el autor aparece una sola vez en `authors`. Entre paréntesis, "
+      "`name_type`: qué nombre del autor usa esa fila (`pseudonym` = registrado como "
+      "seudónimo en P742, aunque sea también la etiqueta principal; `birth_name` = nombre de "
+      "nacimiento P1477; `alias` = otra forma registrada).\n")
+    w(_table(["QID", "Autor (Wikidata)", "Filas del seed (name_type)"], rows))
     w("")
+    rows = q("""SELECT name_type, COUNT(*) FROM seed_resolution WHERE name_type IS NOT NULL
+                GROUP BY 1 ORDER BY 2 DESC""")
+    w("Tipo de nombre en todas las filas resueltas del seed:\n")
+    w(_table(["name_type", "Filas"], rows))
+    w("")
+    w("Los nombres reales solo se reconocen si Wikidata registra el nombre de nacimiento con "
+      "una forma compatible: «Mary Ann Evans» (Wikidata: «Mary Anne Evans») y «Theodor Seuss "
+      "Geisel» (sin P1477) quedan como `alias`.\n")
 
     w("### 2.2 Entradas que no son personas\n")
     rows = q("""SELECT s.raw_name, r.note FROM seed_resolution r JOIN seed_names s USING (seed_id)
