@@ -17,7 +17,7 @@ Requisitos: Python ≥ 3.11. Única dependencia de ejecución: `requests`.
 python -m venv .venv
 .venv/Scripts/python -m pip install -e ".[dev]"     # Linux/macOS: .venv/bin/python
 .venv/Scripts/python -m authors run --offline       # reconstruye todo desde data/cache, sin red
-.venv/Scripts/python -m pytest                      # 21 tests, incluido el pipeline completo
+.venv/Scripts/python -m pytest                      # 28 tests, incluido el pipeline completo
 ```
 
 `run --offline` reconstruye la BD, los CSV y el informe **exactamente iguales** a los commiteados, sin conexión (lo comprueba `tests/test_pipeline.py`). Sin `--offline`, las peticiones que no están en caché se descargan de Wikidata.
@@ -65,7 +65,8 @@ src/authors/
 data/
   authors.db            base de datos resultante
   export/               authors.csv (1 fila/autor), seed_resolution.csv (1 fila/seed)
-  overrides.csv         resoluciones manuales con justificación
+  overrides.csv         resoluciones manuales (fila del seed → QID) con justificación
+  corrections.csv       correcciones manuales de datos erróneos de Wikidata, con evidencia
   cache/                respuestas crudas de Wikidata (reproducibilidad)
 docs/quality_notes.md   análisis manual, se incrusta en el informe
 scripts/sensitivity.py  análisis de sensibilidad de pesos y umbrales (offline)
@@ -79,10 +80,11 @@ ai-usage/               registro del uso de IA
 |---|---|---|
 | `seed_names` | fila del seed | nombre original, nombre limpio (NFC) y clave de comparación |
 | `candidates` | fila × candidato | todos los candidatos evaluados, con sus señales y su score (4.010 filas) |
-| `seed_resolution` | fila del seed | QID elegido, `status` (`matched`/`ambiguous`/`no_match`/`not_a_person`), `method`, `confidence`, `note` |
+| `seed_resolution` | fila del seed | QID elegido, `status` (`matched`/`ambiguous`/`no_match`/`not_a_person`), `method`, `confidence`, `note`, `name_type` (qué nombre del autor usa la fila: `pseudonym`/`main`/`birth_name`/`alias`/`other`) |
 | `authors` | QID | atributos univaluados; fechas como `birth_date` + `birth_year` + `birth_precision` + `birth_calendar`; `conflicting_fields`; `retrieved_at` |
 | `author_occupations`, `author_citizenships`, `author_languages` | autor × valor | QID + etiqueta |
 | `author_names` | autor × nombre | `alias`, `pseudonym` (P742), `birth_name` (P1477) |
+| `author_corrections` | corrección | correcciones aplicadas desde `corrections.csv`: campo, valor original de Wikidata, valor corregido, motivo |
 | `v_authors_flat`, `v_seed_resolution` | vistas | base de los CSV |
 
 `seed_resolution` es la tabla de trazabilidad: por cada fila del seed se puede ver qué se eligió, cómo, con qué confianza y qué otros candidatos hubo (`candidates`).
@@ -132,6 +134,10 @@ Cuando hay empate, el campo se marca en `conflicting_fields` (43 autores). Los I
 ## Calidad, limitaciones y casos dudosos
 
 Ver [`QUALITY_REPORT.md`](QUALITY_REPORT.md). Las cifras se generan desde la BD; la §7 es el análisis manual.
+
+**Seudónimos.** Una persona es un único autor (el modelo de Wikidata). Si el seed trae dos nombres de la misma persona (Robert Galbraith / J. K. Rowling), ambas filas apuntan al mismo QID, y `name_type` indica si la fila usa un seudónimo, el nombre principal o el de nacimiento.
+
+**Datos erróneos en la fuente.** Wikidata es editable por cualquiera. Cuando un dato está mal (por ejemplo, vandalismo), no se toca la caché: se añade una fila a `data/corrections.csv` con la evidencia y el pipeline la aplica tras el enriquecimiento, guardando el valor original. Caso real: Vicente Huidobro (§7.2 del informe).
 
 **Cómo añadir un override:** añade una fila a `data/overrides.csv` con `author_name,qid,reason` (deja `qid` vacío para forzar `no_match`) y ejecuta `python -m authors run --offline`. Si el QID es nuevo, hace falta ejecutar sin `--offline` para descargar sus datos.
 

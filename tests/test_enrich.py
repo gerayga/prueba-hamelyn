@@ -72,3 +72,34 @@ def test_name_type_short_form_is_not_birth_name():
              "birth_name": {"pedro calderon de la barca y barreda"},
              "alias": {"calderon de la barca"}}
     assert classify_name_type("calderon de la barca", names) == "alias"
+
+
+def test_apply_corrections_keeps_original_value(tmp_path):
+    from authors import db
+    from authors.enrich import apply_corrections
+    conn = db.connect(tmp_path / "t.db")
+    conn.execute("INSERT INTO authors (qid, label, description, retrieved_at) "
+                 "VALUES ('Q1', 'Vicente Hohoneo', 'colombian poet', 'x')")
+    conn.execute("INSERT INTO author_names VALUES ('Q1', 'Vicente Hohoneo de la cruz', 'alias', 'en')")
+    path = tmp_path / "corrections.csv"
+    path.write_text("qid,field,value,reason\n"
+                    "Q1,label,Vicente Huidobro,vandalismo\n"
+                    "Q1,remove_name,Vicente Hohoneo de la cruz,vandalismo\n", encoding="utf-8")
+    apply_corrections(conn, path)
+    assert conn.execute("SELECT label FROM authors").fetchone()[0] == "Vicente Huidobro"
+    assert conn.execute("SELECT COUNT(*) FROM author_names").fetchone()[0] == 0
+    assert [tuple(r) for r in conn.execute(
+        "SELECT field, original_value, corrected_value FROM author_corrections ORDER BY rowid")] == [
+        ("label", "Vicente Hohoneo", "Vicente Huidobro"),
+        ("remove_name", "Vicente Hohoneo de la cruz", None)]
+
+
+def test_apply_corrections_rejects_unknown_field(tmp_path):
+    import pytest
+    from authors import db
+    from authors.enrich import apply_corrections
+    conn = db.connect(tmp_path / "t.db")
+    path = tmp_path / "corrections.csv"
+    path.write_text("qid,field,value,reason\nQ1,qid,Q2,x\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        apply_corrections(conn, path)

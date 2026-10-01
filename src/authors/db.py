@@ -97,6 +97,15 @@ CREATE TABLE IF NOT EXISTS author_names (
     PRIMARY KEY (qid, name, kind)
 );
 
+-- Correcciones manuales aplicadas sobre datos de Wikidata (data/corrections.csv).
+CREATE TABLE IF NOT EXISTS author_corrections (
+    qid             TEXT NOT NULL REFERENCES authors(qid),
+    field           TEXT NOT NULL,         -- columna de authors o 'remove_name'
+    original_value  TEXT,                  -- valor tal como venía de Wikidata
+    corrected_value TEXT,                  -- NULL si se eliminó
+    reason          TEXT NOT NULL
+);
+
 -- Vista plana: una fila por autor, multivalores separados por ' | '.
 CREATE VIEW IF NOT EXISTS v_authors_flat AS
 SELECT

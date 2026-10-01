@@ -11,9 +11,11 @@ elige de forma determinista (fecha más precisa; si no, menor QID) y se anota el
 campo en `conflicting_fields`. Los IDs externos (VIAF, ISNI...) son legítimamente
 multivalor: se guardan todos, ordenados y separados por ' | '.
 """
+import csv
 import logging
 import sqlite3
 from collections import defaultdict
+from pathlib import Path
 
 from authors.normalize import CALENDARS, PRECISION_NAMES, match_key, parse_wikidata_time
 from authors.wikidata import WikidataClient
@@ -138,6 +140,38 @@ def pick_date(claims: list[dict]) -> tuple[dict | None, bool]:
     return chosen, conflict
 
 
+def apply_corrections(conn: sqlite3.Connection, path: Path) -> None:
+    """Aplica data/corrections.csv: correcciones manuales a datos de Wikidata.
+
+    Cada fila es (qid, field, value, reason). `field` es una columna de
+    `authors` o `remove_name` (borra un nombre de `author_names`). El valor
+    original se guarda en `author_corrections` para que la corrección sea trazable.
+    """
+    if not path.exists():
+        return
+    author_cols = {r[1] for r in conn.execute("PRAGMA table_info(authors)")} - {"qid"}
+    with open(path, encoding="utf-8", newline="") as f:
+        rows = [r for r in csv.DictReader(f) if r["qid"].strip()]
+    for r in rows:
+        qid, field, value = r["qid"].strip(), r["field"].strip(), r["value"]
+        if field == "remove_name":
+            found = conn.execute("SELECT COUNT(*) FROM author_names WHERE qid = ? AND name = ?",
+                                 (qid, value)).fetchone()[0]
+            conn.execute("DELETE FROM author_names WHERE qid = ? AND name = ?", (qid, value))
+            original, value = (value if found else None), None
+        elif field in author_cols:
+            row = conn.execute(f"SELECT {field} FROM authors WHERE qid = ?", (qid,)).fetchone()
+            if row is None:
+                raise ValueError(f"corrections.csv: {qid} no está en authors")
+            original = row[0]
+            conn.execute(f"UPDATE authors SET {field} = ? WHERE qid = ?", (value, qid))
+        else:
+            raise ValueError(f"corrections.csv: campo no válido '{field}'")
+        conn.execute("INSERT INTO author_corrections VALUES (?,?,?,?,?)",
+                     (qid, field, original, value, r["reason"]))
+    log.info("Aplicadas %d correcciones manuales", len(rows))
+
+
 NAME_TYPE_PRIORITY = ("pseudonym", "main", "birth_name", "alias")
 
 
@@ -180,7 +214,8 @@ def classify_seed_names(conn: sqlite3.Connection) -> None:
                      [(classify_name_type(key, names[qid]), sid) for sid, qid, key in rows])
 
 
-def run(conn: sqlite3.Connection, client: WikidataClient) -> None:
+def run(conn: sqlite3.Connection, client: WikidataClient,
+        corrections_path: Path | None = None) -> None:
     qids = sorted({r[0] for r in conn.execute(
         "SELECT DISTINCT qid FROM seed_resolution WHERE qid IS NOT NULL")})
     log.info("Enriqueciendo %d autores", len(qids))
@@ -201,8 +236,8 @@ def run(conn: sqlite3.Connection, client: WikidataClient) -> None:
         by_author[s["qid"]][s["pid"]].append(s)
 
     with conn:
-        for table in ("author_occupations", "author_citizenships", "author_languages",
-                      "author_names", "authors"):
+        for table in ("author_corrections", "author_occupations", "author_citizenships",
+                      "author_languages", "author_names", "authors"):
             conn.execute(f"DELETE FROM {table}")
 
         for n, qid in enumerate(qids, 1):
@@ -262,6 +297,8 @@ def run(conn: sqlite3.Connection, client: WikidataClient) -> None:
                 log.info("Enriquecidos %d/%d", n, len(qids))
 
         conn.executemany("INSERT OR IGNORE INTO author_names VALUES (?,?,'alias',?)", aliases)
-        classify_seed_names(conn)
+        if corrections_path is not None:
+            apply_corrections(conn, corrections_path)
+        classify_seed_names(conn)  # después de las correcciones: dependen de las etiquetas
 
     log.info("Enriquecimiento: %d peticiones desde caché, %d nuevas", client.hits - hits0, client.misses - misses0)

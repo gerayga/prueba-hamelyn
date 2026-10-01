@@ -49,10 +49,10 @@ Tipo de nombre en todas las filas resueltas del seed:
 
 | name_type | Filas |
 |---|---|
-| main | 438 |
+| main | 439 |
 | pseudonym | 42 |
 | alias | 11 |
-| birth_name | 5 |
+| birth_name | 4 |
 | other | 2 |
 
 Los nombres reales solo se reconocen si Wikidata registra el nombre de nacimiento con una forma compatible: «Mary Ann Evans» (Wikidata: «Mary Anne Evans») y «Theodor Seuss Geisel» (sin P1477) quedan como `alias`.
@@ -64,11 +64,23 @@ Los nombres reales solo se reconocen si Wikidata registra el nombre de nacimient
 | Anonymous | nombre genérico, no es una persona |
 | Various Authors | nombre genérico, no es una persona |
 
-### 2.3 Overrides manuales
+### 2.3 Overrides manuales y correcciones de datos
+
+Overrides de resolución (`data/overrides.csv`): qué QID corresponde a una fila del seed.
 
 | Seed | QID | Justificación |
 |---|---|---|
 | Mary Beard | Q458403 | override manual: Clasicista británica, autora de SPQR (38 sitelinks). Alternativa descartada: Mary Ritter Beard, Q6780609, historiadora estadounidense (28 sitelinks). El seed la agrupa con divulgación contemporánea (Harari, Diamond) |
+
+Correcciones de atributos (`data/corrections.csv`): datos erróneos en Wikidata que se corrigen tras el enriquecimiento. El valor original queda en `author_corrections`.
+
+| QID | Autor | Campo | Valor en Wikidata | Corregido | Motivo |
+|---|---|---|---|---|---|
+| Q117018 | Vicente Huidobro | label | Vicente Hohoneo | Vicente Huidobro | Vandalismo en Wikidata: la revisión 2532105531 (2026-08-16, cuenta anónima temporal) cambió las etiquetas en/es a «Vicente Hohoneo». Se restaura el valor anterior, que coincide con la etiqueta mul |
+| Q117018 | Vicente Huidobro | label_es | Vicente Hohoneo | Vicente Huidobro | Misma edición vandálica (revisión 2532105531) |
+| Q117018 | Vicente Huidobro | description | colombian poet | Chilean poet | Misma edición: cambió «Chilean poet» por «colombian poet». Huidobro era chileno (nacido en Santiago, fallecido en Cartagena, Chile) |
+| Q117018 | Vicente Huidobro | remove_name | Vicente Hohoneo de la cruz |  | Alias añadido por la edición vandálica (revisión 2532105531) |
+| Q117018 | Vicente Huidobro | remove_name | Vicente Hohoneo de la cruz Fernandez |  | Alias añadido por la edición vandálica (revisión 2532105531) |
 
 ### 2.4 Resueltos por dominancia de notoriedad (margen de score pequeño)
 
@@ -205,12 +217,19 @@ Autores con conflicto en fechas:
 | Sin fecha de muerte y nacido antes de 1926 | 0 | OK |
 | Autor sin ocupación literaria ni obras (P50) | 0 | OK |
 | Fila del seed sin autor enriquecido | 0 | OK |
+| Resuelto por etiqueta exacta, pero el nombre del seed no es el principal del autor | 1 | revisar |
 
 **Vida > 105 años**
 
 |  |  |  |
 |---|---|---|
 | Murasaki Shikibu | 0970 (decade) | 1100 (century) |
+
+**Resuelto por etiqueta exacta, pero el nombre del seed no es el principal del autor**
+
+|  |  |  |
+|---|---|---|
+| Andrey Platonov | Andrei Platonov | other |
 
 ## 6. Muestra aleatoria para verificación manual
 
@@ -261,6 +280,7 @@ La revisión de QIDs y fechas la hizo el asistente de IA con conocimiento genera
 
 - **Mary Beard** (único override). Hay dos candidatas con notoriedad parecida: la clasicista británica (38 sitelinks) y la historiadora estadounidense Mary Ritter Beard (28). La regla no decide sola y se resolvió manualmente por contexto: el seed agrupa divulgación contemporánea (Harari, Diamond, Sagan). La justificación queda en `data/overrides.csv`.
 - **Ismat Chughtai.** Wikidata tiene 5 fechas de nacimiento de rango normal (1911, 1915 y 1925, con días distintos). El desempate original («la primera que devuelve el API») daba 1911. Se cambió a «más referencias, sin contar P143 (importado de Wikipedia)», y ahora da 1915-08-15. El año coincide con la fuente de referencia (21-08-1915); el día sigue discutido. Queda marcado en `conflicting_fields`. El mismo cambio corrigió la fecha de muerte de Sadegh Hedayat (04-04 → 09-04-1951).
+- **Vicente Huidobro: vandalismo en Wikidata.** El QID (Q117018) es correcto, pero la entidad llegó con la etiqueta «Vicente Hohoneo», la descripción «colombian poet» (era chileno) y dos alias inventados. Según el historial, los introdujo una cuenta anónima en la revisión 2532105531 (16-08-2026), y la etiqueta y la descripción inglesas seguían sin revertir al descargar. Se detectó al clasificar el tipo de nombre de cada fila: el nombre del seed ya no coincidía con la etiqueta del autor. Se corrige con `data/corrections.csv`, restaurando los valores anteriores a esa edición; el valor original queda guardado en `author_corrections` (§2.3). La comprobación de §5 «Resuelto por etiqueta exacta, pero el nombre del seed no es el principal del autor» queda para detectar casos parecidos en el futuro. Usar siempre la etiqueta `mul` no era una solución: de los 16 autores en los que difiere de la inglesa, en 15 la inglesa es la correcta (p. ej. Plato frente a «Πλάτων»).
 - **Murasaki Shikibu.** Aparece en la comprobación «vida > 105 años» (970–1100), pero es un efecto de la precisión, no un error. El valor preferente de muerte es `1100` con precisión de siglo, es decir, «siglo XI». Por eso las fechas deben leerse siempre junto con `*_precision`.
 - **Homero, Laozi, Safo y otros autores antiguos.** Las fechas son aproximaciones con precisión de siglo o década y, en varios casos, con muchos valores alternativos en Wikidata. Se toma el de rango preferente.
 - **Robert Galbraith → J. K. Rowling.** Existe en Wikidata una entidad «Robert Galbraith» (juez escocés) con el nombre exacto. Gana Rowling porque el alias coincide, es escritora y tiene 181 sitelinks frente a 2. Es la decisión correcta para una base de datos de autores de libros, pero depende de la regla de notoriedad (ver 7.3).

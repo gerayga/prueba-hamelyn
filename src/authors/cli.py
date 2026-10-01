@@ -14,6 +14,7 @@ DEFAULT_SEED = ROOT / "authors_seed.csv"
 DEFAULT_DB = ROOT / "data" / "authors.db"
 CACHE_DIR = ROOT / "data" / "cache"
 OVERRIDES = ROOT / "data" / "overrides.csv"
+CORRECTIONS = ROOT / "data" / "corrections.csv"
 EXPORT_DIR = ROOT / "data" / "export"
 REPORT = ROOT / "QUALITY_REPORT.md"
 QUALITY_NOTES = ROOT / "docs" / "quality_notes.md"
@@ -61,7 +62,7 @@ def cmd_resolve(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
 
 
 def cmd_enrich(conn: sqlite3.Connection, args: argparse.Namespace) -> None:
-    enrich.run(conn, get_client(args))
+    enrich.run(conn, get_client(args), CORRECTIONS)
 
 
 def cmd_export(conn: sqlite3.Connection, args: argparse.Namespace) -> None:

@@ -91,7 +91,7 @@ seed_id,author_name,status,method,confidence,qid,name_type,wikidata_label,wikida
 90,José Donoso,matched,exact_label,0.898,Q439761,main,José Donoso,Chilean author and journalist (1924-1996),
 91,Diamela Eltit,matched,exact_label,0.87,Q2032745,main,Diamela Eltit,Chilean writer (born 1947),
 92,Nicanor Parra,matched,exact_label,0.92,Q360832,main,Nicanor Parra,"Chilean writer, poet, mathematician, and physicist (1914-2018)",
-93,Vicente Huidobro,matched,exact_label,0.902,Q117018,birth_name,Vicente Hohoneo,colombian poet,
+93,Vicente Huidobro,matched,exact_label,0.902,Q117018,main,Vicente Huidobro,Chilean poet,
 94,Roberto Arlt,matched,exact_label,0.896,Q188838,main,Roberto Arlt,Argentine writer,
 95,Ernesto Sabato,matched,exact_label,0.936,Q186630,main,Ernesto Sabato,"Argentine writer, painter and physicist (1911-2011)",
 96,Manuel Rivas,matched,exact_label,0.89,Q2320966,main,Manuel Rivas,Galician writer and journalist,

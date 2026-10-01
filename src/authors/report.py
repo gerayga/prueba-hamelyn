@@ -95,10 +95,18 @@ def build(conn: sqlite3.Connection, notes_path: Path) -> str:
     w(_table(["Seed", "Motivo"], rows))
     w("")
 
-    w("### 2.3 Overrides manuales\n")
+    w("### 2.3 Overrides manuales y correcciones de datos\n")
+    w("Overrides de resolución (`data/overrides.csv`): qué QID corresponde a una fila del seed.\n")
     rows = q("""SELECT s.raw_name, r.qid, r.note FROM seed_resolution r JOIN seed_names s USING (seed_id)
                 WHERE r.method = 'override'""")
     w(_table(["Seed", "QID", "Justificación"], rows) if rows else "_Ninguno._")
+    w("")
+    w("Correcciones de atributos (`data/corrections.csv`): datos erróneos en Wikidata que se "
+      "corrigen tras el enriquecimiento. El valor original queda en `author_corrections`.\n")
+    rows = q("""SELECT c.qid, a.label, c.field, c.original_value, c.corrected_value, c.reason
+                FROM author_corrections c JOIN authors a USING (qid) ORDER BY c.rowid""")
+    w(_table(["QID", "Autor", "Campo", "Valor en Wikidata", "Corregido", "Motivo"], rows)
+      if rows else "_Ninguna._")
     w("")
 
     w("### 2.4 Resueltos por dominancia de notoriedad (margen de score pequeño)\n")
@@ -194,6 +202,12 @@ def build(conn: sqlite3.Connection, notes_path: Path) -> str:
         ("Fila del seed sin autor enriquecido",
          """SELECT s.raw_name, r.qid, '' FROM seed_resolution r JOIN seed_names s USING (seed_id)
             WHERE r.qid IS NOT NULL AND r.qid NOT IN (SELECT qid FROM authors)"""),
+        # Detectó el vandalismo de Vicente Huidobro: se resolvió por etiqueta exacta, pero tras
+        # enriquecer el nombre del seed ya no era la etiqueta del autor.
+        ("Resuelto por etiqueta exacta, pero el nombre del seed no es el principal del autor",
+         """SELECT s.raw_name, a.label, r.name_type FROM seed_resolution r
+            JOIN seed_names s USING (seed_id) JOIN authors a USING (qid)
+            WHERE r.method = 'exact_label' AND r.name_type NOT IN ('main', 'pseudonym')"""),
     ]
     summary = []
     details = []
