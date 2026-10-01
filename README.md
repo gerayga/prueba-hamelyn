@@ -68,6 +68,7 @@ data/
   overrides.csv         resoluciones manuales con justificación
   cache/                respuestas crudas de Wikidata (reproducibilidad)
 docs/quality_notes.md   análisis manual, se incrusta en el informe
+scripts/sensitivity.py  análisis de sensibilidad de pesos y umbrales (offline)
 tests/                  normalización, reglas de resolución, fechas, pipeline completo
 ai-usage/               registro del uso de IA
 ```
@@ -104,6 +105,8 @@ ai-usage/               registro del uso de IA
    - **Notoriedad:** `log10(sitelinks)`, saturada.
 5. **Decisión.** El resultado es `matched` si el score es ≥ 0,6, el candidato tiene perfil literario y le saca un margen ≥ 0,15 al segundo. El margen no se exige cuando el mejor candidato tiene ≥ 5× los sitelinks del segundo (*dominancia*). Así se resuelven homónimos menores que también escriben, como el padre de John Milton. Si no se cumple, el resultado es `ambiguous`: se guarda el mejor candidato con su nota y se revisa a mano.
 6. **Overrides.** `data/overrides.csv` recoge decisiones humanas con justificación y se aplica al final. Solo hizo falta uno (Mary Beard).
+
+**¿Dependen los resultados de los pesos?** Apenas. `python scripts/sensitivity.py` recalcula la resolución con 171 combinaciones de pesos y con distintos umbrales, márgenes y factores de dominancia: 493 de 498 filas resuelven siempre al mismo autor. Detalle y casos límite en la §7.3 de `QUALITY_REPORT.md`.
 
 **Fechas: del JSON original, no de SPARQL.** El endpoint SPARQL devuelve las fechas en XSD 1.1: los años a.C. llegan desplazados uno (630 a.C. → `-0629`) y las fechas julianas se convierten a gregoriano. Por eso las fechas se leen con `wbgetclaims` y se guardan tal como están en Wikidata, con su precisión y su calendario. `birth_year` es el año histórico (negativo = a.C.). Una fecha con precisión de siglo (`-0650`, `century`) significa «siglo VII a.C.».
 

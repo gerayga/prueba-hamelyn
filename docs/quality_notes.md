@@ -25,14 +25,33 @@ La revisión de QIDs y fechas la hizo el asistente de IA con conocimiento genera
 - **Robert Galbraith → J. K. Rowling.** Existe en Wikidata una entidad «Robert Galbraith» (juez escocés) con el nombre exacto. Gana Rowling porque el alias coincide, es escritora y tiene 181 sitelinks frente a 2. Es la decisión correcta para una base de datos de autores de libros, pero depende de la regla de notoriedad (ver 7.3).
 - **Autores de no ficción y ciencia** (Hawking, Sagan, Goodall, Kahneman…). Se aceptan como autores porque tienen obras con P50 o una ocupación de escritor. Jane Goodall se resuelve a la primatóloga y no a la escritora australiana homónima (Jane R. Goodall, 4 sitelinks).
 
-### 7.3 Limitaciones
+### 7.3 Sensibilidad de los parámetros
+
+Los pesos de la puntuación (0,40 nombre / 0,35 perfil literario / 0,25 notoriedad) son heurísticos. Para saber si condicionan el resultado, se recalculó la resolución de las 498 filas con otras configuraciones (`python scripts/sensitivity.py`, offline):
+
+- **Repartos razonables** (0,50/0,30/0,20 · 1/3 cada uno · 0,60/0,20/0,20 · 0,30/0,30/0,40): eligen exactamente los mismos 498 autores.
+- **Barrido completo** (171 combinaciones en pasos de 0,05): **493 de 498 filas resuelven siempre al mismo autor.** Las 5 restantes:
+
+| Fila | Cuándo cambia | Por qué |
+|---|---|---|
+| Robert Galbraith | notoriedad ≤ 0,20 | gana el juez escocés homónimo, que tiene el nombre exacto |
+| Nguyễn Du | notoriedad ≥ 0,70 | gana Ho Chi Minh, por pura fama |
+| Samuel Clemens, Mary Ann Evans | nombre ≥ 0,85 | ganan homónimos desconocidos en lugar del seudónimo famoso |
+| **Jane Goodall** | perfil literario claramente por encima de la notoriedad (p. ej. 0,40/0,40/0,20) | **caso límite real**: la primatóloga tiene libros pero no figura como «escritora», y compite con una escritora australiana homónima. Los pesos actuales están cerca de su frontera; hoy se resuelve por dominancia (122 frente a 4 sitelinks) |
+
+- **Umbral** (0,5–0,7), **margen** (0,10–0,20) y **dominancia** (2×–5×) no cambian ninguna decisión en esos rangos. Con valores más estrictos, algunos casos pasan a revisión manual, pero ninguno cambia de autor.
+
+Conclusión: los pesos son una heurística, pero apenas condicionan el resultado. Lo que importa es combinar las tres señales, no el valor exacto de cada peso. Se mantienen los pesos actuales.
+
+### 7.4 Limitaciones
 
 1. **Una sola fuente.** Todo sale de Wikidata. Hereda sus sesgos de cobertura: los autores occidentales y canónicos están mejor descritos. Las 500 filas del seed son autores conocidos, así que la cobertura del 100 % no se extrapola a una lista de autores poco conocidos.
 2. **La notoriedad como desempate.** La puntuación y la regla de dominancia favorecen al homónimo más famoso. Es lo correcto para este seed, pero fallaría si la lista incluyera a un autor menor con el mismo nombre que otro famoso. Sin contexto adicional (por ejemplo, un ISBN o un título de obra en el seed) no se puede distinguir.
-3. **Pesos heurísticos no calibrados.** Los pesos (0,40 nombre / 0,35 perfil literario / 0,25 notoriedad) y los umbrales se ajustaron observando este seed, no contra un conjunto etiquetado. La mitigación es que cada decisión es trazable (`candidates`, `seed_resolution.note`) y los casos límite se listan en este informe.
+3. **Pesos heurísticos no calibrados.** Los pesos y los umbrales no se calibraron contra un conjunto etiquetado. El análisis de sensibilidad (7.3) muestra que el resultado apenas depende de ellos en este seed, pero no garantiza lo mismo con otra lista. Cada decisión es trazable (`candidates`, `seed_resolution.note`).
 4. **Búsqueda solo en inglés y español.** Todos los nombres del seed están en alfabeto latino. Para nombres en otras escrituras habría que añadir idiomas de búsqueda.
-5. **Instantánea.** Los datos reflejan Wikidata en la fecha de descarga (`retrieved_at`). Una ejecución online posterior puede dar resultados distintos; la caché permite reproducir exactamente esta versión.
-6. **Selección de valores únicos.** Para lugares con varios valores sin rango preferente se elige el de menor QID. Es determinista pero arbitrario, y queda marcado en `conflicting_fields`.
-7. **Lista de no-personas escrita a mano** (`Anonymous`, `Various Authors`…). Una lista nueva podría traer otros genéricos («Anónimo», «VV. AA.», «Unknown»). Los más comunes ya están incluidos.
-8. **Seudónimos.** Cada fila del seed apunta a la persona real. El seudónimo se conserva como nombre (`author_names`, `kind='pseudonym'`), pero no como entidad propia. Si se necesitara atribuir obras al seudónimo, habría que modelarlo aparte.
-9. **Etiquetas en inglés.** Nombres de lugares, ocupaciones e idiomas se guardan en inglés, con respaldo en `mul` y español. `label_es` sí se guarda para el nombre del autor.
+5. **Comparación de nombres sin diacríticos.** Al comparar se quitan las tildes, y eso hace iguales a «Nguyễn Du» y «Nguyễn Dữ», dos escritores vietnamitas distintos. Aquí no ha causado errores (la notoriedad los separa), pero en idiomas donde los diacríticos distinguen nombres convendría comparar con ellos.
+6. **Instantánea.** Los datos reflejan Wikidata en la fecha de descarga (`retrieved_at`). Una ejecución online posterior puede dar resultados distintos; la caché permite reproducir exactamente esta versión.
+7. **Selección de valores únicos.** Para lugares con varios valores sin rango preferente se elige el de menor QID. Es determinista pero arbitrario, y queda marcado en `conflicting_fields`.
+8. **Lista de no-personas escrita a mano** (`Anonymous`, `Various Authors`…). Una lista nueva podría traer otros genéricos («Anónimo», «VV. AA.», «Unknown»). Los más comunes ya están incluidos.
+9. **Seudónimos.** Cada fila del seed apunta a la persona real. El seudónimo se conserva como nombre (`author_names`, `kind='pseudonym'`), pero no como entidad propia. Si se necesitara atribuir obras al seudónimo, habría que modelarlo aparte.
+10. **Etiquetas en inglés.** Nombres de lugares, ocupaciones e idiomas se guardan en inglés, con respaldo en `mul` y español. `label_es` sí se guarda para el nombre del autor.

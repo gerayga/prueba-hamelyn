@@ -29,8 +29,15 @@ El enfoque inicial (Wikidata, SQLite, un repo) fue mío. En el resto de puntos, 
 | Override de Mary Beard → la clasicista | Dejarla como ambigua | Dos candidatas con notoriedad parecida. El contexto del seed (divulgación actual) decide. |
 | Seudónimos: la fila del seed apunta a la persona real | Tratar el seudónimo como entidad propia | Para una base de autores interesa la persona. El seudónimo se conserva como nombre. |
 | Fechas con su precisión y calendario originales* | Normalizar a `DATE` | Un «siglo VII a.C.» no es una fecha exacta. Normalizar inventaría precisión. |
+| Validar los pesos de la puntuación con un análisis de sensibilidad (y mantener los actuales) | Cambiarlos sin más datos · sustituir la puntuación por reglas en orden | Los pesos no se pueden calibrar sin un conjunto etiquetado, así que investigué cómo cambiaba el resultado al variarlos (ver abajo). |
 | Informe de calidad generado desde los datos + notas manuales aparte* | Informe escrito a mano | Las cifras no se desactualizan y el análisis manual no se pisa al regenerar. |
 | No distribuir el enunciado en el repo | — | Lo retiré del historial. |
+
+### Sobre los pesos de la puntuación
+
+> Los pesos son una heurística, pero comprobé que apenas condicionan el resultado: en 171 combinaciones, 493 de 498 resoluciones no cambian nunca. De las 5 restantes, 4 solo cambian si una señal se lleva al extremo; la excepción es Jane Goodall, un caso límite real (primatóloga con libros frente a una escritora homónima) que queda señalado en el informe. Lo que importa es combinar las tres señales, no el valor exacto de cada peso.
+
+Reproducible con `python scripts/sensitivity.py`; detalle en la §7.3 de `QUALITY_REPORT.md`.
 
 ## Qué se revisó antes de aprobar cada paso
 
