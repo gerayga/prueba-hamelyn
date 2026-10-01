@@ -25,7 +25,7 @@ El enfoque inicial (Wikidata, SQLite, un repo) fue mío. En el resto de puntos, 
 | Versionar la caché cruda de Wikidata | No versionarla y descargar en cada ejecución | Reproducibilidad exacta y ejecución sin red. Wikidata cambia continuamente. |
 | Casos ambiguos: guardar el mejor candidato con confianza baja + overrides manuales | Dejarlos sin QID | No se pierde información, queda trazado y la decisión humana está documentada. |
 | Aceptar «humano cuya existencia se discute» (Q21070568) como persona | Resolver Homero con un override | Es una regla general que vale para otras figuras semilegendarias, no un parche puntual. |
-| Regla de dominancia (≥ 5× sitelinks) | Resolver los 13 ambiguos con overrides | Los 13 eran homónimos muy menores. Una regla generaliza mejor que 13 excepciones manuales. |
+| Regla de dominancia (≥ 5× sitelinks) | Resolver los 13 ambiguos con overrides · factores de 3× o 10× | Los 13 eran homónimos muy menores. Una regla generaliza mejor que 13 excepciones manuales. Al revisar el factor vi que los casos claros están todos por encima de 9× y el único dudoso (Mary Beard) en 1,4×; cualquier valor en ese hueco da el mismo resultado, y 5× cae en medio. |
 | Override de Mary Beard → la clasicista | Dejarla como ambigua | Dos candidatas con notoriedad parecida. El contexto del seed (divulgación actual) decide. |
 | Seudónimos: la fila del seed apunta a la persona real | Tratar el seudónimo como entidad propia | Para una base de autores interesa la persona. El seudónimo se conserva como nombre. |
 | Fechas con su precisión y calendario originales* | Normalizar a `DATE` | Un «siglo VII a.C.» no es una fecha exacta. Normalizar inventaría precisión. |

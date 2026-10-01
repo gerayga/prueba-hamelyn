@@ -270,6 +270,15 @@ Los pesos de la puntuación (0,40 nombre / 0,35 perfil literario / 0,25 notoried
 
 - **Umbral** (0,5–0,7), **margen** (0,10–0,20) y **dominancia** (2×–5×) no cambian ninguna decisión en esos rangos. Con valores más estrictos, algunos casos pasan a revisión manual, pero ninguno cambia de autor.
 
+**Por qué el factor de dominancia es 5×.** En las 13 filas donde el mejor candidato saca menos de 0,15 de ventaja al segundo, la proporción de sitelinks entre ambos se reparte en dos grupos muy separados:
+
+| Grupo | Filas | Proporción de sitelinks (elegido / 2º) |
+|---|---|---|
+| Homónimo claramente menor | Galbraith → Rowling (90×), Henry James (33×), John Milton (31×), W. B. Yeats (31×), Jane Goodall (30×), Mario Benedetti (23×), Primo Levi (23×), James Baldwin (20×), Samuel Johnson (12×), Bruno Schulz (11×), Robert Browning (9,8×), Nguyễn Du (9,2×) | **≥ 9,2×** |
+| Ambigüedad real | Mary Beard (38 frente a 28) | **1,4×** |
+
+Cualquier factor entre 1,4× y 9,2× produce exactamente el mismo resultado. Se eligió 5×, que cae en medio de ese hueco. El valor exacto no es una decisión crítica: aunque saliera del rango, ningún autor cambiaría; solo variaría cuántos casos se aceptan automáticamente y cuántos van a revisión manual. El riesgo de la regla es el mismo sesgo de notoriedad descrito en 7.4: si el seed contuviera al homónimo menor, la regla elegiría al famoso sin avisar. Por eso las filas resueltas así se listan en §2.4.
+
 Conclusión: los pesos son una heurística, pero apenas condicionan el resultado. Lo que importa es combinar las tres señales, no el valor exacto de cada peso. Se mantienen los pesos actuales.
 
 ### 7.4 Limitaciones
