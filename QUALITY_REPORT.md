@@ -5,6 +5,14 @@
 - Filas del seed: **500**. Autores únicos en la BD: **491**.
 - Datos descargados de Wikidata entre 2026-09-30T15:46:53Z y 2026-09-30T15:47:23Z (instantánea; Wikidata cambia continuamente).
 
+## Resumen
+
+- **Resolución:** 498 de 500 filas resueltas a una persona de Wikidata (1 por decisión manual) y 2 que no son personas (`Anonymous`, `Various Authors`). 7 pares del seed son la misma persona con dos nombres (seudónimo / nombre real); en total, 42 filas usan un seudónimo (§1, §2).
+- **Verificación:** se revisaron uno a uno todos los casos ambiguos, los seudónimos, los nombres de una palabra y una muestra aleatoria de 20 filas (cómo y con qué alcance, en §7.1).
+- **Datos de la fuente:** 1 autor llegó vandalizado en Wikidata y se corrigió de forma trazable (§2.3, §7.2). 43 autores tienen valores en conflicto en Wikidata (varios lugares o fechas); se elige uno de forma determinista y se marcan (§4). Las fechas se guardan con su precisión y calendario (16 autores nacidos antes de Cristo).
+- **Robustez:** los pesos de la puntuación apenas condicionan el resultado: en 171 combinaciones, 493 de 498 filas resuelven siempre al mismo autor (§7.3).
+- **Principales limitaciones:** una sola fuente; la notoriedad como desempate favorece al homónimo famoso; los pesos no están calibrados con datos etiquetados (§7.4).
+
 ## 1. Resolución nombre → Wikidata
 
 | Estado | Filas | % |

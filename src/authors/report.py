@@ -45,6 +45,31 @@ def build(conn: sqlite3.Connection, notes_path: Path) -> str:
     w(f"- Datos descargados de Wikidata entre {ret[0]} y {ret[1]} (instantánea; "
       "Wikidata cambia continuamente).\n")
 
+    # --- Resumen ---------------------------------------------------------------
+    status = dict(q("SELECT status, COUNT(*) FROM seed_resolution GROUP BY status"))
+    n_override = q("SELECT COUNT(*) FROM seed_resolution WHERE method = 'override'")[0][0]
+    n_shared = q("""SELECT COUNT(*) FROM (SELECT qid FROM seed_resolution WHERE qid IS NOT NULL
+                    GROUP BY qid HAVING COUNT(*) > 1)""")[0][0]
+    n_pseudo = q("SELECT COUNT(*) FROM seed_resolution WHERE name_type = 'pseudonym'")[0][0]
+    n_corr = q("SELECT COUNT(DISTINCT qid) FROM author_corrections")[0][0]
+    n_conf = q("SELECT COUNT(*) FROM authors WHERE conflicting_fields IS NOT NULL")[0][0]
+    n_bce = q("SELECT COUNT(*) FROM authors WHERE birth_year < 0")[0][0]
+    w("## Resumen\n")
+    w(f"- **Resolución:** {status.get('matched', 0)} de {n_seed} filas resueltas a una persona de "
+      f"Wikidata ({n_override} por decisión manual) y {status.get('not_a_person', 0)} que no son "
+      f"personas (`Anonymous`, `Various Authors`). {n_shared} pares del seed son la misma persona "
+      f"con dos nombres (seudónimo / nombre real); en total, {n_pseudo} filas usan un seudónimo (§1, §2).")
+    w("- **Verificación:** se revisaron uno a uno todos los casos ambiguos, los seudónimos, los "
+      "nombres de una palabra y una muestra aleatoria de 20 filas (cómo y con qué alcance, en §7.1).")
+    w(f"- **Datos de la fuente:** {n_corr} autor llegó vandalizado en Wikidata y se corrigió de forma "
+      f"trazable (§2.3, §7.2). {n_conf} autores tienen valores en conflicto en Wikidata (varios "
+      f"lugares o fechas); se elige uno de forma determinista y se marcan (§4). Las fechas se guardan "
+      f"con su precisión y calendario ({n_bce} autores nacidos antes de Cristo).")
+    w("- **Robustez:** los pesos de la puntuación apenas condicionan el resultado: en 171 "
+      "combinaciones, 493 de 498 filas resuelven siempre al mismo autor (§7.3).")
+    w("- **Principales limitaciones:** una sola fuente; la notoriedad como desempate favorece al "
+      "homónimo famoso; los pesos no están calibrados con datos etiquetados (§7.4).\n")
+
     # --- 1. Resolución ---------------------------------------------------------
     w("## 1. Resolución nombre → Wikidata\n")
     rows = q("SELECT status, COUNT(*) FROM seed_resolution GROUP BY status ORDER BY 2 DESC")
